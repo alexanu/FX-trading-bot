@@ -9,3 +9,17 @@
 #### 必要なもの
 - Oanda Rest API V20のアカウントとトークン
 - (LINE通知機能を使用する場合）LINE notify用のトークン
+
+#### 必要なモジュール
+- NumPy
+- Pandas
+- TensorFlow
+- matplotlib
+- mpl_finance
+- sys
+- json
+- tqdm
+- requests
+- scipy
+- time
+- sklearn
