@@ -1,3 +1,3 @@
 # Octopus
-###### Python+TensorFlow製のFXトレードbot
+##### Python+TensorFlow製のFXトレードbot
 
