@@ -23,7 +23,7 @@ from RoutineInspector import RoutineInspector
 
 #User difined functions
 from Notify import notify_from_line
-from JSONLoader import from_byte_to_dict, from_response_to_dict
+from OandaEndpoints import from_byte_to_dict, from_response_to_dict
 
 '''
 Environment            Description

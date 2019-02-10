@@ -2,8 +2,9 @@ import numpy as np
 
 from OandaEndpoints import Order, Position, Pricing, Instrument
 from Plotter import Plotter
+
 from Notify import notify_from_line
-from JSONLoader import from_byte_to_dict, from_response_to_dict
+from OandaEndpoints import from_byte_to_dict, from_response_to_dict
 
 """
 def from_byte_to_dict(byte_line):
