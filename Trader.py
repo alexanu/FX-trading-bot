@@ -1,3 +1,15 @@
+import time
+import json
+from OandaEndpoints import Order, Position, Pricing, Instrument
+
+
+def from_response_to_dict(response):
+	try:
+		return json.loads(response.content.decode('UTF-8'))
+	except Exception as e:
+		print("Caught exception when converting message into json : {}" .format(str(e)))
+		return None
+
 class Trader:
 	def __init__(self, instrument, environment='demo', mode='test'):
 		self.state = None

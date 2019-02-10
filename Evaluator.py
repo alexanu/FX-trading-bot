@@ -1,3 +1,64 @@
+import numpy as np
+import json
+import sys
+
+from OandaEndpoints import Order, Position, Pricing, Instrument
+from Plotter import Plotter
+
+def from_byte_to_dict(byte_line):
+	"""
+	byte型の文字列をdict型に変換する
+
+	Parameters
+	----------
+	byte_line: byte
+		byte型の文字列
+	"""
+
+	try:
+		return json.loads(byte_line.decode("UTF-8"))
+	except Exception as e:
+		print("Caught exception when converting message into json : {}" .format(str(e)))
+		return None
+
+def from_response_to_dict(response):
+	try:
+		return json.loads(response.content.decode('UTF-8'))
+	except Exception as e:
+		print("Caught exception when converting message into json : {}" .format(str(e)))
+		return None
+
+def notify_from_line(message, image=None):
+	url = 'https://notify-api.line.me/api/notify'
+	with open(sys.argv[1]) as f:
+		auth_tokens = json.load(f)
+		token = auth_tokens['line_token']
+		print(f'<bot> Read token from {sys.argv[1]}')
+
+	headers = {
+		'Authorization' : 'Bearer {}'.format(token)
+	}
+
+	payload = {
+		'message' :  message
+	}
+	if image is not None:
+		try:
+			files = {
+				'imageFile': open(image, "rb")
+			}
+			response = requests.post(url ,headers=headers ,data=payload, files=files)
+			return response
+		except:
+			pass
+
+	else:
+		try:
+			response = requests.post(url ,headers=headers ,data=payload)
+			return response
+		except:
+			pass
+
 class Evaluator:
 	def __init__(self, timeframes, instrument, environment='demo'):
 		self.pre_price = None

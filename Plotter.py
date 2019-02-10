@@ -1,3 +1,8 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import mpl_finance as mpf
+
 class Plotter:
 	def __init__(self, nrows, ncols, figsize):
 		self.fig, self.axes = plt.subplots(nrows=nrows,ncols=ncols,figsize=figsize,squeeze=False)
