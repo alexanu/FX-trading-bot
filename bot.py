@@ -354,10 +354,10 @@ def test_driver(candlesticks, instrument, environment='demo'):
 
 	#予測器クラスのインスタンスを生成
 	#時間足ごとに生成
-	predictors = {
-		k: Predictor(k) for k in candlesticks.keys()
-	}
-	debug_print('predictor was created')
+	#predictors = {
+	#	k: Predictor(k) for k in candlesticks.keys()
+	#}
+	#debug_print('predictor was created')
 
 
 	#注文用クラスのインスタンスを生成
@@ -410,72 +410,12 @@ def test_driver(candlesticks, instrument, environment='demo'):
 					print(k)
 					print(v.ohlc)
 					print(len(v.ohlc))
-					print('###### Antlia Apricot Trading Strategy ######')
+					print('###### Aquila Persimon Trading Strategy ######')
 
-					"""
-					Antria(アンチラ/ポンプ) Algorythm
-					----------------
-					5分足の最後の4本がしましまのときにエントリー
-
-					"""
-					entry_antlia(k, candlesticks, trader, evaluator)
-
-					"""
-					15分足のアルゴリズム
-					-------------------
-					15分足の更新時にstateが'ORDER'であるとき
-					4時間足がトレンド（上昇or下降）かどうかを判定する
-					T)4時間足が上昇トレンドだった場合
-						T)15分足において,足かせを通るかをどうかを判定する
-							T)買い注文
-							F)注文を行わず処理終了
-						F)15分足において,足かせを通るかをどうかを判定する
-							T)売り:注文
-							F)注文を行わず処理終了
-					F)4時間足がレンジだった場合
-						注文を行わず処理終了
-
-					"""
-					#entry_andromeda(key, candlesticks, trader, evaluator, predictors, fetters)
-
-
-					"""
-					5分足のアルゴリズム(debug)
-					-------------------
-
-					"""
-					#entry_apus(key, candlesticks, trader, evaluator, predictors, fetters)
-
-
-					"""
-					#複数の時間足を考慮する際のアルゴリズム(の雛形)
-					"""
-					#entry_aquarius(key, candlesticks, trader, evaluator, predictors, fetters)
-
-
-					"""
-					Apricot(アンズ) Algorythm
-					-------------------------
-					#決済を行うかどうかを判断
-					#(now)1分足が2本更新された際に決済を行う
-					"""
-					settle_apricot(k, candlesticks, trader, evaluator)
-	
-					"""
-					Strawberry(イチゴ) Algorythm
-					----------------------------
-					#決済を行うかどうかを判断
-					#5分足が2本更新された際に決済を行う
-					"""
-					#settle_strawberry(k, trader, evaluator)
-
-					"""
-					persimmon(カキ) Algorythm
-					-------------------------
-					#決済を行うかどうかを判断
-					#(now)15分足が2本更新された際に決済を行う
-					"""
-					#settle_persimmon(k, trader, evaluator)
+					#エントリー
+					entry_aquila(k, candlesticks, trader, evaluator)
+					#決済（クローズ）
+					settle_persimmon(k, trader, evaluator)
 
 					#時間足が更新されたときにも注文が反映されたかを確認する
 					#注文が反映されたか
@@ -611,9 +551,119 @@ def entry_andromeda(key, candlesticks, trader, evaluator, predictors, fetters):
 		for k, v in candlesticks.items():
 			predictors[k].reset()
 	### Algorythm end ###
-							
 
-def	entry_antlia(key, candlesticks, trader, evaluator):
+def entry_aquila(key, candlesticks, trader, evaluator):	
+	"""
+	Aquila(わし) Algorythm
+	----------------
+	4時間足の最後の2本がしましまのときにエントリー
+	"""
+
+	### Algorythm begin ###
+	if key == '15min' and trader.state == 'ORDER':
+		hl_slopes = {}
+		hl_intercepts = {}
+		#安値トレンドライン
+		debug_print('calculate Bottom trend line')
+		slopes, intercepts = calc_trendline(candlesticks, 'low')
+		hl_slopes['low'] = slopes
+		hl_intercepts['low'] = intercepts
+		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'low')
+
+		#高値トレンドライン
+		debug_print('calculate Top trend line')
+		slopes, intercepts = calc_trendline(candlesticks, 'high')
+		hl_slopes['high'] = slopes
+		hl_intercepts['high'] = intercepts
+
+		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'high')
+		#evaluator.output_double_trendline(candlesticks, hl_slopes, hl_intercepts)
+
+		print('############ Aquila Entry Strategy ############')
+		#Ichimatsu Strategy
+		slopes = {}
+		intercepts = {}
+		num_sets = {}
+		ohlc = candlesticks['4H'].ohlc.copy()
+		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
+
+		#ローソク足を2本1セットとして、numに対となるローソク足の本数を指定
+		num_sets['4H'] = 2
+		tail = ohlc[-num_sets['4H']:]
+
+		close_open = ['close' if i%2 == 0 else 'open' for i in range(num_sets['4H'])]
+		x = np.array([i + 1 for i in range(num_sets['4H'])])
+		y = [tail[co].values[i] for i, co in enumerate(close_open)]
+		#meno stderrを使うかもしれない
+		slopes['4H'], intercepts['4H'], _, _, _ = linregress(x, y)
+		#evaluator.output_tail(candlesticks['5min'].ohlc, slopes['5min'], intercepts['5min'], num_set)
+
+		bottom = [+1 if i%2 == 0 else -1 for i in range(num_sets['4H'])]
+		top    = [+1 if i%2 != 0 else -1 for i in range(num_sets['4H'])]
+		signs = list(np.sign(tail['open'].values - tail['close'].values))
+
+		print(f'Top: {top==signs}')
+		print(f'Bottom: {bottom==signs}')
+
+		kind = None
+		is_rise = None
+		#and np.abs(slopes['5min']) < 0.01
+		#底値
+		if bottom == signs:
+			#BUY
+			is_rise = True
+			kind = 'BUY'
+			print('Bottom')
+		#高値
+		elif top == signs:
+			#SELL
+			is_rise = False
+			kind = 'SELL'
+			print('Top')
+		else:
+			print('Unsteable')
+
+
+		if kind is not None:
+			print(kind)
+			is_order_created = trader.test_create_order(is_rise)
+			#評価関数に注文情報をセット
+			evaluator.set_order(kind)
+
+			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
+			evaluator.begin_plotter()
+			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
+			evaluator.add_candlestick(candlesticks)
+			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
+			evaluator.add_ichimatsu(candlesticks, num_sets)
+			evaluator.end_plotter('signal.png', True)
+
+			if True is is_order_created:
+				#ORDER状態からORDERWAITINGに状態遷移
+				trader.switch_state()
+			else:
+				print('order was not created')
+
+		else:
+			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
+			evaluator.begin_plotter()
+			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
+			evaluator.add_candlestick(candlesticks)
+			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
+			evaluator.add_ichimatsu(candlesticks, num_sets)
+			evaluator.end_plotter('signal.png', False)
+			notify_from_line('progress', image='signal.png')
+
+	### Algorythm end ###
+
+
+
+def entry_antlia(key, candlesticks, trader, evaluator):
+	"""
+	Antria(アンチラ) Algorythm
+	----------------
+	5分足の最後の4本がしましまのときにエントリー
+	"""
 	### Algorythm begin ###
 	if key == '1min' and trader.state == 'ORDER':
 		hl_slopes = {}
@@ -916,6 +966,12 @@ def entry_aquarius(key, candlesticks, trader, evaluator, predictors, fetters):
 
 
 def settle_apricot(key, candlesticks, trader, evaluator):
+	"""
+	Apricot(アンズ) Algorythm
+	-------------------------
+	#決済を行うかどうかを判断
+	#(now)1分足が2本更新された際に決済を行う
+	"""
 	### Algorythm begin ###
 	if key == '1min' and trader.state == 'POSITION':
 		print('############ Apricot Settle Strategy ############')
@@ -946,6 +1002,12 @@ def settle_apricot(key, candlesticks, trader, evaluator):
 
 
 def settle_strawberry(key, candlesticks, trader, evaluator):
+	"""
+	Strawberry(イチゴ) Algorythm
+	----------------------------
+	#決済を行うかどうかを判断
+	#5分足が2本更新された際に決済を行う
+	"""
 	if key == '5min' and trader.state == 'POSITION':
 		#ポジションを決済可能か
 		if trader.can_close_position() is True:
@@ -990,6 +1052,12 @@ def settle_strawberry(key, candlesticks, trader, evaluator):
 
 
 def settle_persimmon(key, candlesticks, trader, evaluator):
+	"""
+	persimmon(カキ) Algorythm
+	-------------------------
+	#決済を行うかどうかを判断
+	#(now)15分足が2本更新された際に決済を行う
+	"""
 	if key == '15min' and trader.state == 'POSITION':
 		#ポジションを決済可能か
 		if trader.can_close_position() is True:
@@ -1027,15 +1095,9 @@ def settle_persimmon(key, candlesticks, trader, evaluator):
 
 
 def main():
-	"""
 	timeframes = {
 		'15min': RNNparam('15min').tau,
 		'4H': RNNparam('4H').tau
-	}
-	"""
-	timeframes = {
-		'1min': RNNparam('1min').tau,
-		'5min': RNNparam('5min').tau
 	}
 
 	instrument = 'GBP_JPY'
