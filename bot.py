@@ -17,7 +17,7 @@ from RNNparam import RNNparam
 from Fetter import Fetter
 from Plotter import Plotter
 from Evaluator import Evaluator
-from Predictor import Predictor
+#from Predictor import Predictor
 from Trader import Trader
 from RoutineInspector import RoutineInspector
 
