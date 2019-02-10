@@ -1,7 +1,7 @@
-import requests
-import json
+#import requests
+#import json
 #import time
-import sys
+#import sys
 import numpy as np
 import pandas as pd
 #import matplotlib.pyplot as plt
@@ -20,6 +20,10 @@ from Evaluator import Evaluator
 from Predictor import Predictor
 from Trader import Trader
 from RoutineInspector import RoutineInspector
+
+#User difined functions
+from Notify import notify_from_line
+from JSONLoader import from_byte_to_dict, from_response_to_dict
 
 '''
 Environment            Description
@@ -67,16 +71,8 @@ def accumulate_timeframe(response, candlestick, strategy):
 		else:
 			continue
 
+"""
 def from_byte_to_dict(byte_line):
-	"""
-	byte型の文字列をdict型に変換する
-
-	Parameters
-	----------
-	byte_line: byte
-		byte型の文字列
-	"""
-
 	try:
 		return json.loads(byte_line.decode("UTF-8"))
 	except Exception as e:
@@ -89,7 +85,7 @@ def from_response_to_dict(response):
 	except Exception as e:
 		print("Caught exception when converting message into json : {}" .format(str(e)))
 		return None
-
+"""
 
 def can_not_connect(res):
 	if res.status_code != 200:
@@ -245,6 +241,7 @@ def initialize(timeframes, instrument, environment='demo'):
 	debug_print('initialize end')
 	return candlesticks
 
+"""
 def notify_from_line(message, image=None):
 	url = 'https://notify-api.line.me/api/notify'
 	with open(sys.argv[1]) as f:
@@ -275,6 +272,7 @@ def notify_from_line(message, image=None):
 			return response
 		except:
 			pass
+"""
 
 def all_element_in(signals):
 	"""

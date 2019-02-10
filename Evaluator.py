@@ -1,20 +1,12 @@
 import numpy as np
-import json
-import sys
 
 from OandaEndpoints import Order, Position, Pricing, Instrument
 from Plotter import Plotter
+from Notify import notify_from_line
+from JSONLoader import from_byte_to_dict, from_response_to_dict
 
+"""
 def from_byte_to_dict(byte_line):
-	"""
-	byte型の文字列をdict型に変換する
-
-	Parameters
-	----------
-	byte_line: byte
-		byte型の文字列
-	"""
-
 	try:
 		return json.loads(byte_line.decode("UTF-8"))
 	except Exception as e:
@@ -27,7 +19,9 @@ def from_response_to_dict(response):
 	except Exception as e:
 		print("Caught exception when converting message into json : {}" .format(str(e)))
 		return None
+"""
 
+"""
 def notify_from_line(message, image=None):
 	url = 'https://notify-api.line.me/api/notify'
 	with open(sys.argv[1]) as f:
@@ -58,6 +52,7 @@ def notify_from_line(message, image=None):
 			return response
 		except:
 			pass
+"""
 
 class Evaluator:
 	def __init__(self, timeframes, instrument, environment='demo'):
