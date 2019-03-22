@@ -11,6 +11,11 @@
 - You can use RNN or LSTM to analyze candle stick data
 - It send trade imformation to you by using LINE notify
 
+# 使い方
+'''
+$python3 bot.py auth.json
+'''
+
 #### 必要なもの（required）
 - Oanda Rest API V20のアカウントとトークン
 - (LINE通知機能を使用する場合）LINE notify用のトークン
