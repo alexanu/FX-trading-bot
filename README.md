@@ -20,6 +20,7 @@ $python3 bot.py auth.json
 - LINE notify token
 - Oanda id
 - Oanda token
+
 jsonの内容は以下のようになっています。
 ```
 {
