@@ -12,9 +12,18 @@
 - It send trade imformation to you by using LINE notify
 
 # 使い方
-'''
+```
 $python3 bot.py auth.json
-'''
+```
+実行には認証用のトークン（auth.json）が必要となります。
+トークンには以下の3つが格納されています。
+```
+{"line_token": "your LINE notify token", 
+ "oanda_id": "XXX-XXX-XXXXXXX-XXX",
+ "oanda_token": "your oanda token"
+}
+```
+
 
 #### 必要なもの（required）
 - Oanda Rest API V20のアカウントとトークン
