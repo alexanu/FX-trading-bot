@@ -18,7 +18,8 @@ $python3 bot.py auth.json
 実行には認証用のトークン（auth.json）が必要となります。
 トークンには以下の3つが格納されています。
 ```
-{"line_token": "your LINE notify token", 
+{
+ "line_token": "your LINE notify token", 
  "oanda_id": "XXX-XXX-XXXXXXX-XXX",
  "oanda_token": "your oanda token"
 }
