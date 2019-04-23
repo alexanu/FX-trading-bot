@@ -45,7 +45,11 @@ jsonの内容は以下のようになっています。
 - mpl_finance
 - tqdm
 - scipy
-- scikit-klearn
+- scikit-learn
+以上の依存するモジュールはrequirements.txtを用いてまとめて取得することができる
+```
+$pip3 install -r requirements.txt
+```
 
 #### 実装済み
 - トレンドラインの自動生成
