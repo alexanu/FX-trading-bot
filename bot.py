@@ -415,7 +415,7 @@ def test_driver(candlesticks, instrument, environment='demo'):
 					#エントリー
 					entry_aquila(k, candlesticks, trader, evaluator)
 					#決済（クローズ）
-					settle_persimmon(k, trader, evaluator)
+					settle_persimmon(k, candlesticks, trader, evaluator)
 
 					#時間足が更新されたときにも注文が反映されたかを確認する
 					#注文が反映されたか
