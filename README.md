@@ -43,13 +43,9 @@ jsonの内容は以下のようになっています。
 - TensorFlow
 - matplotlib
 - mpl_finance
-- sys
-- json
 - tqdm
-- requests
 - scipy
-- time
-- sklearn
+- scikit-klearn
 
 #### 実装済み
 - トレンドラインの自動生成
@@ -63,3 +59,7 @@ jsonの内容は以下のようになっています。
 - bot.py内のクラスを別ファイルに分割
 - 並列化
 - tqdmからfastprogressへ切り替え
+
+#### bug fix
+- クラスを分割する際にdebug_print関数を呼び出せなくなっていたため修正
+- 決済用の関数（settle_persimon）の引数が間違っていたため修正
