@@ -336,6 +336,13 @@ def calc_trendline(candlesticks, price='high'):
 			ohlc[k] = ohlc[k].loc[left_hand > right_hand]
 	return slopes, intercepts
 
+#def from_ohlc_to_vector(candlestick, key='close'):
+#	return candlestick[key].values
+
+#def normalize_vec(x):
+#	return (x - x.min()) / (x.max() - x.min())
+	#return (x - x.min()) / (x.max() - x.min()), x.max(), x.min()
+
 def test_driver(candlesticks, instrument, environment='demo'):
 	"""
 	ローソク足データの収集、解析、取引を取り扱う
@@ -370,10 +377,10 @@ def test_driver(candlesticks, instrument, environment='demo'):
 
 	#足かせクラスのインスタンスを生成
 	#時間足ごとに生成
-	fetters = {
-		k: Fetter(k) for k in candlesticks.keys()
-	}
-	debug_print('fetter was created')
+	#fetters = {
+	#	k: Fetter(k) for k in candlesticks.keys()
+	#}
+	#debug_print('fetter was created')
 
 	#strategy_handler = Strategy(environment, instrument)
 	#現在保有しているポジションをすべて決済
@@ -405,6 +412,8 @@ def test_driver(candlesticks, instrument, environment='demo'):
 
 			### NEW PROCESS(This process separates time frames I deal with)
 			for k, v in candlesticks.items():
+				#print(v.normalize_by('close', raw=False))
+				print(v.normalize_by('close').values)
 				if can_update(recv, v) is True:
 					v.update_ohlc_()
 					print(k)
@@ -448,6 +457,9 @@ def test_driver(candlesticks, instrument, environment='demo'):
 		routiner.update()
 
 
+#def to_RNNvector(x):
+#	return np.array([[x]]).transpose(0,2,1)
+
 def entry_andromeda(key, candlesticks, trader, evaluator, predictors, fetters):
 	"""
 	15分足のアルゴリズム
@@ -475,11 +487,15 @@ def entry_andromeda(key, candlesticks, trader, evaluator, predictors, fetters):
 		#特定の時間足において予測を行う場合
 		for k, v in candlesticks.items():
 			#OHLCの中から終値をベクトルとして取り出す
-			x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
+			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
 			#取り出した終値ベクトルを正規化する
-			x[k] = predictors[k].normalize_vec(x[k])
+			#x[k] = predictors[k].normalize_vec(x[k])
+
+			x[k] = v.ohlc.normalize_by('close')
+
 			#終値ベクトルをRNNに投入できるように変形する
-			x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			x_rnn[k] = to_RNNvector(x[k])
 
 		for i in ['4H']:
 			#事前に予測した結果を保存しておく
@@ -761,7 +777,7 @@ def entry_antlia(key, candlesticks, trader, evaluator):
 
 	### Algorythm end ###
 
-def	entry_apus(key, candlesticks, trader, evaluator, predictors, fetters):
+def entry_apus(key, candlesticks, trader, evaluator, predictors, fetters):
 	### Algorythm begin ###
 	if k == '5min' and trader.state == 'ORDER':
 
@@ -773,11 +789,15 @@ def	entry_apus(key, candlesticks, trader, evaluator, predictors, fetters):
 		#特定の時間足において予測を行う場合
 		for k, v in candlesticks.items():
 			#OHLCの中から終値をベクトルとして取り出す
-			x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
+			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
 			#取り出した終値ベクトルを正規化する
-			x[k] = predictors[k].normalize_vec(x[k])
+			#x[k] = predictors[k].normalize_vec(x[k])
+
+			x[k] = v.ohlc.normalize_by('close')
+
 			#終値ベクトルをRNNに投入できるように変形する
-			x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			x_rnn[k] = to_RNNvector(x[k])
 
 		for i in ['5min']:
 			#事前に予測した結果を保存しておく
@@ -860,11 +880,15 @@ def entry_aquarius(key, candlesticks, trader, evaluator, predictors, fetters):
 		#特定の時間足において予測を行う場合
 		for i in range(['4H']):
 			#OHLCの中から終値をベクトルとして取り出す
-			x[i] = predictors[i].from_ohlc_to_vector(candlesticks[i].ohlc, 'close')
+			#x[i] = predictors[i].from_ohlc_to_vector(candlesticks[i].ohlc, 'close')
 			#取り出した終値ベクトルを正規化する
-			x[i] = predictors[i].normalize_vec(x[i])
+			#x[i] = predictors[i].normalize_vec(x[i])
+
+			x[i] = v.ohlc.normalize_by('close')
+
 			#終値ベクトルをRNNに投入できるように変形する
-			x_rnn[i] = predictors[i].to_RNNvector(x[i])
+			#x_rnn[i] = predictors[i].to_RNNvector(x[i])
+			x_rnn[i] = to_RNNvector(x[i])
 
 			#事前に予測した結果を保存しておく
 			predictors[i].preset_prediction(x_rnn[i])
@@ -879,11 +903,15 @@ def entry_aquarius(key, candlesticks, trader, evaluator, predictors, fetters):
 		#すべての時間足において予測を行う場合
 		for k, v in candlesticks.items():
 			#OHLCの中から終値をベクトルとして取り出す
-			x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
+			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
 			#取り出した終値ベクトルを正規化する
-			x[k] = predictors[k].normalize_vec(x[k])
+			#x[k] = predictors[k].normalize_vec(x[k])
+
+			x[k] = v.ohlc.normalize_by('close')
+
 			#終値ベクトルをRNNに投入できるように変形する
-			x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
+			x_rnn[k] = to_RNNvector(x[k])
 
 			#事前に予測した結果を保存しておく
 			predictors[k].preset_prediction(x_rnn[k])
@@ -1050,6 +1078,12 @@ def settle_strawberry(key, candlesticks, trader, evaluator):
 		#決済するかを判断するアルゴリズムを更新
 		trader.update_whether_closing_position()
 
+#def from_ohlc_to_vector(candlestick, key='close'):
+#	return candlestick[key].values
+
+#def normalize_vec(x):
+#	return (x - x.min()) / (x.max() - x.min())
+	#return (x - x.min()) / (x.max() - x.min()), x.max(), x.min()
 
 def settle_persimmon(key, candlesticks, trader, evaluator):
 	"""
@@ -1068,15 +1102,20 @@ def settle_persimmon(key, candlesticks, trader, evaluator):
 			correct = {}
 			for k, v in candlesticks.items():
 				#for evaluate
+				#predictorを使う場合or正規化に使う変数を保持しておきたい場合
 				#OHLCの中から終値をベクトルとして取り出す
-				x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
+				#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
 				#取り出した終値ベクトルを正規化する
-				x[k] = predictors[k].normalize_vec(x[k])
+				#x[k] = predictors[k].normalize_vec(x[k])
+
+				x[k] = v.normalize_by('close').values
+				#or x[k] = v.normalize_by('close' raw=True)
 
 				#要修正
 				threshold = 2
 				correct[k] = np.mean(x[k][-threshold:])
-			evaluator.set_close_config(correct, candlesticks)
+
+			evaluator.set_close()
 
 			#LINE notification
 			evaluator.output_close()

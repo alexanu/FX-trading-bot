@@ -95,6 +95,24 @@ class CandleStick:
 #			return True
 #		else:
 #			return False
+	def normalize(self):
+		#numpy
+		return (self.ohlc - self.ohlc.values.min()) / (self.ohlc.values.max() - self.ohlc.values.min())
+
+	def normalize_each(self):
+		#pandas
+		return (self.ohlc - self.ohlc.min()) / (self.ohlc.max() - self.ohlc.min())
+
+
+	"""
+		list = ['open', 'high', 'low', 'close']
+		normalised_vec = [normalize_by(key) for key in list]
+	"""
+	def normalize_by(self, key='close', raw=False):
+		if raw is True:
+			return ((self.ohlc[key] - self.ohlc[key].values.min()) / (self.ohlc[key].values.max() - self.ohlc[key].values.min())).values
+		else:
+			return (self.ohlc[key] - self.ohlc[key].values.min()) / (self.ohlc[key].values.max() - self.ohlc[key].values.min())
 
 def main():
 	print("This class is FXData")
