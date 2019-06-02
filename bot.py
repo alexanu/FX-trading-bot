@@ -71,22 +71,6 @@ def accumulate_timeframe(response, candlestick, strategy):
 		else:
 			continue
 
-"""
-def from_byte_to_dict(byte_line):
-	try:
-		return json.loads(byte_line.decode("UTF-8"))
-	except Exception as e:
-		print("Caught exception when converting message into json : {}" .format(str(e)))
-		return None
-
-def from_response_to_dict(response):
-	try:
-		return json.loads(response.content.decode('UTF-8'))
-	except Exception as e:
-		print("Caught exception when converting message into json : {}" .format(str(e)))
-		return None
-"""
-
 def can_not_connect(res):
 	if res.status_code != 200:
 		return True
@@ -241,39 +225,6 @@ def initialize(timeframes, instrument, environment='demo'):
 	debug_print('initialize end')
 	return candlesticks
 
-"""
-def notify_from_line(message, image=None):
-	url = 'https://notify-api.line.me/api/notify'
-	with open(sys.argv[1]) as f:
-		auth_tokens = json.load(f)
-		token = auth_tokens['line_token']
-		print(f'<bot> Read token from {sys.argv[1]}')
-
-	headers = {
-		'Authorization' : 'Bearer {}'.format(token)
-	}
-
-	payload = {
-		'message' :  message
-	}
-	if image is not None:
-		try:
-			files = {
-				'imageFile': open(image, "rb")
-			}
-			response = requests.post(url ,headers=headers ,data=payload, files=files)
-			return response
-		except:
-			pass
-
-	else:
-		try:
-			response = requests.post(url ,headers=headers ,data=payload)
-			return response
-		except:
-			pass
-"""
-
 def all_element_in(signals):
 	"""
 	リストに格納されているbool値がすべてTrueかすべてFalseかを判断して返す。
@@ -335,13 +286,6 @@ def calc_trendline(candlesticks, price='high'):
 
 			ohlc[k] = ohlc[k].loc[left_hand > right_hand]
 	return slopes, intercepts
-
-#def from_ohlc_to_vector(candlestick, key='close'):
-#	return candlestick[key].values
-
-#def normalize_vec(x):
-#	return (x - x.min()) / (x.max() - x.min())
-	#return (x - x.min()) / (x.max() - x.min()), x.max(), x.min()
 
 def test_driver(candlesticks, instrument, environment='demo'):
 	"""
@@ -457,117 +401,6 @@ def test_driver(candlesticks, instrument, environment='demo'):
 		routiner.update()
 
 
-#def to_RNNvector(x):
-#	return np.array([[x]]).transpose(0,2,1)
-
-def entry_andromeda(key, candlesticks, trader, evaluator, predictors, fetters):
-	"""
-	15分足のアルゴリズム
-	-------------------
-	15分足の更新時にstateが'ORDER'であるとき
-	4時間足がトレンド（上昇or下降）かどうかを判定する
-	T)4時間足が上昇トレンドだった場合
-		T)15分足において,足かせを通るかをどうかを判定する
-			T)買い注文
-			F)注文を行わず処理終了
-		F)15分足において,足かせを通るかをどうかを判定する
-			T)売り:注文
-			F)注文を行わず処理終了
-	F)4時間足がレンジだった場合
-		注文を行わず処理終了
-
-	"""
-	### Algorythm begin ###
-	if key == '15min' and trader.state == 'ORDER':
-
-		x = {}
-		x_rnn = {}
-		predicted = {}
-		
-		#特定の時間足において予測を行う場合
-		for k, v in candlesticks.items():
-			#OHLCの中から終値をベクトルとして取り出す
-			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
-			#取り出した終値ベクトルを正規化する
-			#x[k] = predictors[k].normalize_vec(x[k])
-
-			x[k] = v.ohlc.normalize_by('close')
-
-			#終値ベクトルをRNNに投入できるように変形する
-			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
-			x_rnn[k] = to_RNNvector(x[k])
-
-		for i in ['4H']:
-			#事前に予測した結果を保存しておく
-			predictors[i].preset_prediction(x_rnn[i])
-
-			#評価用にあらかじめ予測結果を取り出しておく
-			#予測結果が存在している場合は計算をスキップできる
-			if predictors[i].is_loaded() is True:
-				predicted[i] = predictors[i].predicted
-			else:
-				predicted[i] = predictors[i].rnn.predict(candlesticks[i].ohlc)
-			
-		#特定の時間足のトレンドorレンジを判定
-		is_trend = predictors['4H'].is_trend(x['4H'])
-
-		#評価関数に注文情報をセット
-		evaluator.begin_plotter()
-		evaluator.add_candlestick(candlesticks)
-		evaluator.add_predicted(predicted)
-		evaluator.add_line(x)
-		evaluator.end_plotter('signal.png', True)
-
-		#evaluator.set_now_config(x,predicted,candlesticks)
-		#LINE notification
-		#evaluator.output_now()
-
-		if True is is_trend:
-			print('predictor judged TREND')
-
-			#ひとつの時間足のトレンドを考慮する場合
-			#特定の時間足の上昇or下降を予測、判定する
-			is_rise = predictors['4H'].is_rise(x['4H'])
-
-			#各時間足に対する条件（足かせ）をクリアするかを判定
-			fetter_signals = {
-				'15min': fetters['15min'].is_through(x['15min'], is_rise),
-				'4H': fetters['4H'].is_through(x['4H'],is_rise)
-			}
-
-			#ひとつの時間足のトレンドを考慮する場合
-			if all_element_in(fetter_signals) is True:
-				print('All fetters clear')
-				if is_rise is True:
-					order_kind = 'BUY'
-					pass
-				else:
-					order_kind = 'SELL'
-					pass
-				print(order_kind)
-				is_order_created = trader.test_create_order(is_rise)
-
-				#評価関数に注文情報をセット
-				evaluator.set_order(order_kind)
-
-				#evaluator.set_order_config(x,predicted,candlesticks,order_kind)
-				#LINE notification
-				#evaluator.output_order()
-
-				if True is is_order_created:
-					#ORDER状態からORDERWAITINGに状態遷移
-					trader.switch_state()
-				else:
-					print('Some fetters do not clear')
-					pass
-
-		else:
-			print('predictor judged RANGE')
-
-		for k, v in candlesticks.items():
-			predictors[k].reset()
-	### Algorythm end ###
-
 def entry_aquila(key, candlesticks, trader, evaluator):	
 	"""
 	Aquila(わし) Algorythm
@@ -579,6 +412,7 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 	if key == '15min' and trader.state == 'ORDER':
 		hl_slopes = {}
 		hl_intercepts = {}
+
 		#安値トレンドライン
 		debug_print('calculate Bottom trend line')
 		slopes, intercepts = calc_trendline(candlesticks, 'low')
@@ -591,9 +425,6 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 		slopes, intercepts = calc_trendline(candlesticks, 'high')
 		hl_slopes['high'] = slopes
 		hl_intercepts['high'] = intercepts
-
-		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'high')
-		#evaluator.output_double_trendline(candlesticks, hl_slopes, hl_intercepts)
 
 		print('############ Aquila Entry Strategy ############')
 		#Ichimatsu Strategy
@@ -610,9 +441,9 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 		close_open = ['close' if i%2 == 0 else 'open' for i in range(num_sets['4H'])]
 		x = np.array([i + 1 for i in range(num_sets['4H'])])
 		y = [tail[co].values[i] for i, co in enumerate(close_open)]
+
 		#meno stderrを使うかもしれない
 		slopes['4H'], intercepts['4H'], _, _, _ = linregress(x, y)
-		#evaluator.output_tail(candlesticks['5min'].ohlc, slopes['5min'], intercepts['5min'], num_set)
 
 		bottom = [+1 if i%2 == 0 else -1 for i in range(num_sets['4H'])]
 		top    = [+1 if i%2 != 0 else -1 for i in range(num_sets['4H'])]
@@ -624,6 +455,7 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 		kind = None
 		is_rise = None
 		#and np.abs(slopes['5min']) < 0.01
+
 		#底値
 		if bottom == signs:
 			#BUY
@@ -644,11 +476,9 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 			print(kind)
 			is_order_created = trader.test_create_order(is_rise)
 			#評価関数に注文情報をセット
-			evaluator.set_order(kind)
+			evaluator.set_order(kind, True)
 
-			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
 			evaluator.begin_plotter()
-			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
 			evaluator.add_candlestick(candlesticks)
 			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
 			evaluator.add_ichimatsu(candlesticks, num_sets)
@@ -661,9 +491,7 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 				print('order was not created')
 
 		else:
-			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
 			evaluator.begin_plotter()
-			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
 			evaluator.add_candlestick(candlesticks)
 			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
 			evaluator.add_ichimatsu(candlesticks, num_sets)
@@ -672,418 +500,6 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 
 	### Algorythm end ###
 
-
-
-def entry_antlia(key, candlesticks, trader, evaluator):
-	"""
-	Antria(アンチラ) Algorythm
-	----------------
-	5分足の最後の4本がしましまのときにエントリー
-	"""
-	### Algorythm begin ###
-	if key == '1min' and trader.state == 'ORDER':
-		hl_slopes = {}
-		hl_intercepts = {}
-		#安値トレンドライン
-		debug_print('calculate Bottom trend line')
-		slopes, intercepts = calc_trendline(candlesticks, 'low')
-		hl_slopes['low'] = slopes
-		hl_intercepts['low'] = intercepts
-		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'low')
-
-		#高値トレンドライン
-		debug_print('calculate Top trend line')
-		slopes, intercepts = calc_trendline(candlesticks, 'high')
-		hl_slopes['high'] = slopes
-		hl_intercepts['high'] = intercepts
-
-		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'high')
-		#evaluator.output_double_trendline(candlesticks, hl_slopes, hl_intercepts)
-
-		print('############ Antlia Entry Strategy ############')
-		#Ichimatsu Strategy
-		slopes = {}
-		intercepts = {}
-		num_sets = {}
-		ohlc = candlesticks['5min'].ohlc.copy()
-		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
-
-		#ローソク足を2本1セットとして、numに対となるローソク足の本数を指定
-		num_sets['5min'] = 4
-		tail = ohlc[-num_sets['5min']:]
-
-		close_open = ['close' if i%2 == 0 else 'open' for i in range(num_sets['5min'])]
-		x = np.array([i + 1 for i in range(num_sets['5min'])])
-		y = [tail[co].values[i] for i, co in enumerate(close_open)]
-		#meno stderrを使うかもしれない
-		slopes['5min'], intercepts['5min'], _, _, _ = linregress(x, y)
-		#evaluator.output_tail(candlesticks['5min'].ohlc, slopes['5min'], intercepts['5min'], num_set)
-
-		bottom = [+1 if i%2 == 0 else -1 for i in range(num_sets['5min'])]
-		top    = [+1 if i%2 != 0 else -1 for i in range(num_sets['5min'])]
-		signs = list(np.sign(tail['open'].values - tail['close'].values))
-
-		print(f'Top: {top==signs}')
-		print(f'Bottom: {bottom==signs}')
-
-		kind = None
-		is_rise = None
-		#and np.abs(slopes['5min']) < 0.01
-		#底値
-		if bottom == signs:
-			#BUY
-			is_rise = True
-			kind = 'BUY'
-			print('Bottom')
-		#高値
-		elif top == signs:
-			#SELL
-			is_rise = False
-			kind = 'SELL'
-			print('Top')
-		else:
-			print('Unsteable')
-
-
-		if kind is not None:
-			print(kind)
-			is_order_created = trader.test_create_order(is_rise)
-			#評価関数に注文情報をセット
-			evaluator.set_order(kind)
-
-			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
-			evaluator.begin_plotter()
-			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
-			evaluator.add_candlestick(candlesticks)
-			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
-			evaluator.add_ichimatsu(candlesticks, num_sets)
-			evaluator.end_plotter('signal.png', True)
-
-			if True is is_order_created:
-				#ORDER状態からORDERWAITINGに状態遷移
-				trader.switch_state()
-			else:
-				print('order was not created')
-
-		else:
-			#evaluator.output_ichimatsu(candlesticks, slopes, intercepts, num_sets)
-			evaluator.begin_plotter()
-			#evaluator.add_double_trendline(candlesticks, hl_slopes, hl_intercepts)
-			evaluator.add_candlestick(candlesticks)
-			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
-			evaluator.add_ichimatsu(candlesticks, num_sets)
-			evaluator.end_plotter('signal.png', False)
-			notify_from_line('progress', image='signal.png')
-
-	### Algorythm end ###
-
-def entry_apus(key, candlesticks, trader, evaluator, predictors, fetters):
-	### Algorythm begin ###
-	if k == '5min' and trader.state == 'ORDER':
-
-		x = {}
-		x_rnn = {}
-		predicted = {}
-
-		
-		#特定の時間足において予測を行う場合
-		for k, v in candlesticks.items():
-			#OHLCの中から終値をベクトルとして取り出す
-			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
-			#取り出した終値ベクトルを正規化する
-			#x[k] = predictors[k].normalize_vec(x[k])
-
-			x[k] = v.ohlc.normalize_by('close')
-
-			#終値ベクトルをRNNに投入できるように変形する
-			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
-			x_rnn[k] = to_RNNvector(x[k])
-
-		for i in ['5min']:
-			#事前に予測した結果を保存しておく
-			predictors[i].preset_prediction(x_rnn[i])
-
-			#評価用にあらかじめ予測結果を取り出しておく
-			#予測結果が存在している場合は計算をスキップできる
-			if predictors[i].is_loaded() is True:
-				predicted[i] = predictors[i].predicted
-			else:
-				predicted[i] = predictors[i].rnn.predict(candlesticks[i].ohlc)
-			
-		#特定の時間足のトレンドorレンジを判定
-		is_trend = predictors['5min'].is_trend(x['5min'])
-
-		#現在の状況を可視化
-		#evaluator.set_now_config(x,predicted,candlesticks)
-		#evaluator.output_now()
-		evaluator.begin_plotter()
-		evaluator.add_candlestick(candlesticks)
-		evaluator.add_predicted(x, predicted)
-		evaluator.add_line(x)
-		evaluator.end_plotter('signal.png', True)
-
-		if True is is_trend:
-			print('predictor judged TREND')
-
-			#ひとつの時間足のトレンドを考慮する場合
-			#特定の時間足の上昇or下降を予測、判定する
-			is_rise = predictors['5min'].is_rise(x['5min'])
-			"""
-			#関数の実装がまだなのでダミーでTrueを
-			is_rise = True
-			"""
-
-			#各時間足に対する条件（足かせ）をクリアするかを判定
-			fetter_signals = {
-				'1min': fetters['1min'].is_through(x['1min'],is_rise),
-				'5min': fetters['5min'].is_through(x['5min'],is_rise)
-			}
-
-			#ひとつの時間足のトレンドを考慮する場合
-			if all_element_in(fetter_signals) is True:
-				print('All fetters clear')
-				if is_rise is True:
-					order_kind = 'BUY'
-					pass
-				else:
-					order_kind = 'SELL'
-					pass
-				print(order_kind)
-				is_order_created = trader.test_create_order(is_rise)
-
-				#評価関数に注文情報をセット
-				#evaluator.set_order_config(x,predicted,candlesticks,order_kind)
-				#evaluator.output_order()
-				evaluator.set_order(order_kind)
-
-				if True is is_order_created:
-					#ORDER状態からORDERWAITINGに状態遷移
-					trader.switch_state()
-				else:
-					print('Some fetters do not clear')
-					pass
-
-		else:
-			print('predictor judged RANGE')
-
-		for k, v in candlesticks.items():
-			predictors[k].reset()
-	### Algorythm end ###
-
-def entry_aquarius(key, candlesticks, trader, evaluator, predictors, fetters):
-	### Algorythm begin ###
-	if k == '15min' and trader.state == 'ORDER':
-		x = {}
-		x_rnn = {}
-		predicted = {}
-		
-		#特定の時間足において予測を行う場合
-		for i in range(['4H']):
-			#OHLCの中から終値をベクトルとして取り出す
-			#x[i] = predictors[i].from_ohlc_to_vector(candlesticks[i].ohlc, 'close')
-			#取り出した終値ベクトルを正規化する
-			#x[i] = predictors[i].normalize_vec(x[i])
-
-			x[i] = v.ohlc.normalize_by('close')
-
-			#終値ベクトルをRNNに投入できるように変形する
-			#x_rnn[i] = predictors[i].to_RNNvector(x[i])
-			x_rnn[i] = to_RNNvector(x[i])
-
-			#事前に予測した結果を保存しておく
-			predictors[i].preset_prediction(x_rnn[i])
-
-			#評価用にあらかじめ予測結果を取り出しておく
-			#予測結果が存在している場合は計算をスキップできる
-			if predictors[i].is_loaded() is True:
-				predicted[i] = predictors[i].predicted
-			else:
-				predicted[i] = predictors[i].rnn.predict(candlesticks[i].ohlc)
-
-		#すべての時間足において予測を行う場合
-		for k, v in candlesticks.items():
-			#OHLCの中から終値をベクトルとして取り出す
-			#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
-			#取り出した終値ベクトルを正規化する
-			#x[k] = predictors[k].normalize_vec(x[k])
-
-			x[k] = v.ohlc.normalize_by('close')
-
-			#終値ベクトルをRNNに投入できるように変形する
-			#x_rnn[k] = predictors[k].to_RNNvector(x[k])
-			x_rnn[k] = to_RNNvector(x[k])
-
-			#事前に予測した結果を保存しておく
-			predictors[k].preset_prediction(x_rnn[k])
-
-			#評価用にあらかじめ予測結果を取り出しておく
-			#予測結果が存在している場合は計算をスキップできる
-			if predictors[k].is_loaded() is True:
-				predicted[k] = predictors[k].predicted
-			else:
-				predicted[k] = predictors[k].rnn.predict(v.ohlc)
-
-		#特定の時間足のトレンドorレンジを考慮する場合
-		trend_signals = {
-			'4H': predictors['4H'].is_trend(candlesticks['4H'].ohlc)
-		}
-		#すべての時間足のトレンドorレンジを考慮する場合
-		trend_signals = {	
-			k: predictors[k].is_trend(v.ohlc) for k, v in candlesticks.items()
-		}
-
-		if all_element_in(trend_signals) is True:
-			#特定の時間足の上昇or下降を考慮する場合
-			rise_signals = {
-				'4H': predictors['4H'].is_rise(candlesticks['4H'])
-			}
-			#複数の時間足の上昇or下降を考慮する場合
-			rise_signals = {	
-				k: predictors[k].is_rise(v.ohlc) for k, v in candlesticks.items()
-			}
-			is_rise = all_element_in(rise_signals)
-			if is_rise is not None:
-				#特定の時間足に対する条件（足かせ）をクリアするかを判定
-				fetter_signals = {
-					'4H': fetters['4H'].is_through(candlesticks['4H'].ohlc,is_rise)
-				}
-				#すべての時間足に対する条件（足かせ）をクリアするかを判定
-				fetter_signals = {
-					k: fetters[k].is_through(v.ohlc, is_rise) for k, v in candlesticks.items()
-				}
-
-				#足かせをすべて通過するか
-				if all_element_in(fetters) is True:
-					if is_rise is True:
-						order_kind = 'BUY'
-						#指値や逆指値の設定
-						pass
-					elif is_rise is False:
-						order_kind = 'SELL'
-						#指値や逆指値の設定
-						pass
-					else:
-						pass
-					#注文を発行
-					is_order_created = trader.test_create_order(is_rise)
-
-					#評価関数に注文情報をセット
-					evaluator.set_order_config(x,predicted,candlesticks,order_kind)
-					#LINE notification
-					evaluator.output_order()
-
-					if True is is_order_created:
-						#ORDER -> WAIT_ORDER
-						trader.switch_state()
-					else:
-						debug_print('order can not be created')
-						debug_print('it may be bug if the message appear')
-						pass
-				else:
-					pass
-			else:
-				debug_print('Signal is not distinct.')
-				debug_print('Order can not be created')
-				pass
-
-		for k, v in candlesticks.items():
-			predictors[k].reset()
-		else:
-			print('predictor judged RANGE')
-	### Algorythm end ###
-
-
-def settle_apricot(key, candlesticks, trader, evaluator):
-	"""
-	Apricot(アンズ) Algorythm
-	-------------------------
-	#決済を行うかどうかを判断
-	#(now)1分足が2本更新された際に決済を行う
-	"""
-	### Algorythm begin ###
-	if key == '1min' and trader.state == 'POSITION':
-		print('############ Apricot Settle Strategy ############')
-		#ポジションを決済可能か
-		if trader.can_close_position() is True:
-			#決済の注文を発行する
-			is_position_closed = trader.test_close_position()
-			
-			#evaluator.set_close_config(correct, candlesticks)
-			#evaluator.output_candlestick(candlesticks)
-			evaluator.begin_plotter()
-			evaluator.add_candlestick(candlesticks)
-			evaluator.end_plotter('close.png', True)
-
-			evaluator.set_close()
-			evaluator.log_score()
-
-			#決済の注文が発行されたか
-			if is_position_closed is True:
-				#ORDER -> WAIT_ORDER
-				trader.switch_state()
-			else:
-				pass
-		else:
-			debug_print('Position can not be closed in this update')
-		#決済するかを判断するアルゴリズムを更新
-		trader.update_whether_closing_position()
-
-
-def settle_strawberry(key, candlesticks, trader, evaluator):
-	"""
-	Strawberry(イチゴ) Algorythm
-	----------------------------
-	#決済を行うかどうかを判断
-	#5分足が2本更新された際に決済を行う
-	"""
-	if key == '5min' and trader.state == 'POSITION':
-		#ポジションを決済可能か
-		if trader.can_close_position() is True:
-			#決済の注文を発行する
-			is_position_closed = trader.test_close_position()
-
-			x = {}
-			correct = {}
-			for k, v in candlesticks.items():
-				#for evaluate
-				#OHLCの中から終値をベクトルとして取り出す
-				x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
-				#取り出した終値ベクトルを正規化する
-				x[k] = predictors[k].normalize_vec(x[k])
-
-				#要修正
-				threshold = 2
-				correct[k] = np.mean(x[k][-threshold:])
-			#evaluator.set_close()
-			#evaluator.set_close_config(correct, candlesticks)
-			#LINE notification
-			#evaluator.output_candlestick()
-			#evaluator.log_score()
-
-			evaluator.begin_plotter()
-			evaluator.add_candlestick(candlesticks)
-			evaluator.end_plotter('close.png', True)
-
-			evaluator.set_close()
-			evaluator.log_score()
-
-			#決済の注文が発行されたか
-			if is_position_closed is True:
-				#ORDER -> WAIT_ORDER
-				trader.switch_state()
-			else:
-				pass
-		else:
-			debug_print('Position can not be closed in this update')
-		#決済するかを判断するアルゴリズムを更新
-		trader.update_whether_closing_position()
-
-#def from_ohlc_to_vector(candlestick, key='close'):
-#	return candlestick[key].values
-
-#def normalize_vec(x):
-#	return (x - x.min()) / (x.max() - x.min())
-	#return (x - x.min()) / (x.max() - x.min()), x.max(), x.min()
 
 def settle_persimmon(key, candlesticks, trader, evaluator):
 	"""
@@ -1101,13 +517,6 @@ def settle_persimmon(key, candlesticks, trader, evaluator):
 			x = {}
 			correct = {}
 			for k, v in candlesticks.items():
-				#for evaluate
-				#predictorを使う場合or正規化に使う変数を保持しておきたい場合
-				#OHLCの中から終値をベクトルとして取り出す
-				#x[k] = predictors[k].from_ohlc_to_vector(v.ohlc, 'close')
-				#取り出した終値ベクトルを正規化する
-				#x[k] = predictors[k].normalize_vec(x[k])
-
 				x[k] = v.normalize_by('close').values
 				#or x[k] = v.normalize_by('close' raw=True)
 
@@ -1131,7 +540,6 @@ def settle_persimmon(key, candlesticks, trader, evaluator):
 			debug_print('Position can not be closed in this update')
 		#決済するかを判断するアルゴリズムを更新
 		trader.update_whether_closing_position()
-
 
 def main():
 	timeframes = {
