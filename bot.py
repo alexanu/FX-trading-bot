@@ -363,12 +363,11 @@ def test_driver(candlesticks, instrument, environment='demo'):
 					print(k)
 					print(v.ohlc)
 					print(len(v.ohlc))
-					print('###### Aquila Persimon Trading Strategy ######')
 
 					#エントリー
-					entry_aquila(k, candlesticks, trader, evaluator)
+					entry(k, candlesticks, trader, evaluator)
 					#決済（クローズ）
-					settle_persimmon(k, candlesticks, trader, evaluator)
+					settle(k, candlesticks, trader, evaluator)
 
 					#時間足が更新されたときにも注文が反映されたかを確認する
 					#注文が反映されたか
@@ -400,33 +399,14 @@ def test_driver(candlesticks, instrument, environment='demo'):
 				trader.switch_state()
 		routiner.update()
 
-
-def entry_aquila(key, candlesticks, trader, evaluator):	
+def entry(key, candlesticks, trader, evaluator):	
 	"""
-	Aquila(わし) Algorythm
 	----------------
 	4時間足の最後の2本がしましまのときにエントリー
 	"""
 
 	### Algorythm begin ###
 	if key == '15min' and trader.state == 'ORDER':
-		hl_slopes = {}
-		hl_intercepts = {}
-
-		#安値トレンドライン
-		debug_print('calculate Bottom trend line')
-		slopes, intercepts = calc_trendline(candlesticks, 'low')
-		hl_slopes['low'] = slopes
-		hl_intercepts['low'] = intercepts
-		#evaluator.output_trendline(candlesticks, slopes, intercepts, 'low')
-
-		#高値トレンドライン
-		debug_print('calculate Top trend line')
-		slopes, intercepts = calc_trendline(candlesticks, 'high')
-		hl_slopes['high'] = slopes
-		hl_intercepts['high'] = intercepts
-
-		print('############ Aquila Entry Strategy ############')
 		#Ichimatsu Strategy
 		slopes = {}
 		intercepts = {}
@@ -501,9 +481,8 @@ def entry_aquila(key, candlesticks, trader, evaluator):
 	### Algorythm end ###
 
 
-def settle_persimmon(key, candlesticks, trader, evaluator):
+def settle(key, candlesticks, trader, evaluator):
 	"""
-	persimmon(カキ) Algorythm
 	-------------------------
 	#決済を行うかどうかを判断
 	#(now)15分足が2本更新された際に決済を行う
