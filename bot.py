@@ -10,13 +10,17 @@ import pandas as pd
 from scipy.stats import linregress
 
 #User difined classes
+from CommonParam import CommonParam
 from OandaEndpoints import Order, Position, Pricing, Instrument
 from OandaCandleStick import CandleStick
 #from predict_RNN import RNNPredictor
-from RNNparam import RNNparam
+#from RNNparam import RNNparam
 from Fetter import Fetter
-from Plotter import Plotter
+#from Plotter import Plotter
 from Evaluator import Evaluator
+
+from PlotHelper import PlotHelper
+
 #from Predictor import Predictor
 from Trader import Trader
 from RoutineInspector import RoutineInspector
@@ -30,6 +34,13 @@ Environment            Description
 fxTrade(Live)          The live(real) environment
 fxTrade Practice(Demo) The Demo (virtual) environment
 '''
+
+#Error code
+default_error = -1
+
+#Global param
+entry_freq = '5min'
+target_freq = '15min'
 
 def accumulate_timeframe(response, candlestick, strategy):
 	"""
@@ -317,7 +328,7 @@ def test_driver(candlesticks, instrument, environment='demo'):
 
 	#現在保有しているポジションをすべて決済
 	trader.clean()
-	debug_print('close all position to use Strategy.clean()')
+	debug_print('close all position to use trader.clean()')
 
 	#足かせクラスのインスタンスを生成
 	#時間足ごとに生成
@@ -325,11 +336,6 @@ def test_driver(candlesticks, instrument, environment='demo'):
 	#	k: Fetter(k) for k in candlesticks.keys()
 	#}
 	#debug_print('fetter was created')
-
-	#strategy_handler = Strategy(environment, instrument)
-	#現在保有しているポジションをすべて決済
-	#strategy_handler.clean()
-	#debug_print('close all position to use Strategy.clean()')
 
 	#指定した通貨のtickをストリーミングで取得する
 	pricing_handler = Pricing(environment)
@@ -356,18 +362,17 @@ def test_driver(candlesticks, instrument, environment='demo'):
 
 			### NEW PROCESS(This process separates time frames I deal with)
 			for k, v in candlesticks.items():
-				#print(v.normalize_by('close', raw=False))
-				print(v.normalize_by('close').values)
 				if can_update(recv, v) is True:
 					v.update_ohlc_()
 					print(k)
 					print(v.ohlc)
 					print(len(v.ohlc))
 
-					#エントリー
-					entry(k, candlesticks, trader, evaluator)
-					#決済（クローズ）
-					settle(k, candlesticks, trader, evaluator)
+					if k == '5min':
+						#エントリー
+						entry(candlesticks, trader, evaluator)
+						#決済（クローズ）
+						settle(candlesticks, trader, evaluator)
 
 					#時間足が更新されたときにも注文が反映されたかを確認する
 					#注文が反映されたか
@@ -375,7 +380,6 @@ def test_driver(candlesticks, instrument, environment='demo'):
 						#WAIT_ORDER -> POSITION
 						trader.switch_state()
 
-					#時間足が更新されたときにも決済が反映されたかを確認する
 					#決済が反映されたか
 					if trader.test_is_reflected_position() is True:
 						#WAIT_POSITION -> ORDER
@@ -399,95 +403,85 @@ def test_driver(candlesticks, instrument, environment='demo'):
 				trader.switch_state()
 		routiner.update()
 
-def entry(key, candlesticks, trader, evaluator):	
-	"""
-	----------------
-	4時間足の最後の2本がしましまのときにエントリー
-	"""
+def is_rise_with_zebratail(src, candlesticks):
+	signs, bottom, top = calc_zebratail(src, candlesticks)
 
-	### Algorythm begin ###
-	if key == '15min' and trader.state == 'ORDER':
-		#Ichimatsu Strategy
-		slopes = {}
-		intercepts = {}
-		num_sets = {}
-		ohlc = candlesticks['4H'].ohlc.copy()
-		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
+	print(f'Top: {top==signs}')
+	print(f'Bottom: {bottom==signs}')
 
-		#ローソク足を2本1セットとして、numに対となるローソク足の本数を指定
-		num_sets['4H'] = 2
-		tail = ohlc[-num_sets['4H']:]
+	if (bottom != signs) and (top != signs):
+		print('Unsteable')
+		raise TypeError("is_rise_with_zebra : Return no boolean value(i.e. None)")
 
-		close_open = ['close' if i%2 == 0 else 'open' for i in range(num_sets['4H'])]
-		x = np.array([i + 1 for i in range(num_sets['4H'])])
-		y = [tail[co].values[i] for i, co in enumerate(close_open)]
+	#and np.abs(slopes['5min']) < 0.01
+	#底値(BUY)
+	if bottom == signs:
+		return True
+	#高値(SELL)
+	else:
+		return False
 
-		#meno stderrを使うかもしれない
-		slopes['4H'], intercepts['4H'], _, _, _ = linregress(x, y)
+def calc_zebratail(src, candlesticks):
+	ohlc = candlesticks[src].ohlc.copy()
+	ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
 
-		bottom = [+1 if i%2 == 0 else -1 for i in range(num_sets['4H'])]
-		top    = [+1 if i%2 != 0 else -1 for i in range(num_sets['4H'])]
-		signs = list(np.sign(tail['open'].values - tail['close'].values))
+	#ローソク足を2本1セットとして、numに対となるローソク足の本数を指定
+	num_set = 2 * 1
+	tail = ohlc[-num_set:]
 
-		print(f'Top: {top==signs}')
-		print(f'Bottom: {bottom==signs}')
+	close_open = ['close' if i%2 == 0 else 'open' for i in range(num_set)]
+	x = np.array([i + 1 for i in range(num_set)])
+	y = [tail[co].values[i] for i, co in enumerate(close_open)]
 
-		kind = None
-		is_rise = None
-		#and np.abs(slopes['5min']) < 0.01
+	#meno stderrを使うかもしれない
+	slope, intercept, _, _, _ = linregress(x, y)
 
-		#底値
-		if bottom == signs:
-			#BUY
-			is_rise = True
-			kind = 'BUY'
-			print('Bottom')
-		#高値
-		elif top == signs:
-			#SELL
-			is_rise = False
-			kind = 'SELL'
-			print('Top')
-		else:
-			print('Unsteable')
+	bottom = [+1 if i%2 == 0 else -1 for i in range(num_set)]
+	top    = [+1 if i%2 != 0 else -1 for i in range(num_set)]
+	signs = list(np.sign(tail['open'].values - tail['close'].values))
 
+	output_zebratail(src, candlesticks, slope, intercept, num_set)
 
-		if kind is not None:
-			print(kind)
-			is_order_created = trader.test_create_order(is_rise)
-			#評価関数に注文情報をセット
-			evaluator.set_order(kind, True)
+	return (signs, bottom, top)
 
-			evaluator.begin_plotter()
-			evaluator.add_candlestick(candlesticks)
-			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
-			evaluator.add_ichimatsu(candlesticks, num_sets)
-			evaluator.end_plotter('signal.png', True)
+def output_zebratail(src, candlesticks, slope, intercept, num_set):
+	slopes = {}
+	intercepts = {}
+	num_sets = {}
 
-			if True is is_order_created:
-				#ORDER状態からORDERWAITINGに状態遷移
-				trader.switch_state()
-			else:
-				print('order was not created')
+	slopes[src] = slope
+	intercepts[src] = intercept
+	num_sets[src] = num_set
 
-		else:
-			evaluator.begin_plotter()
-			evaluator.add_candlestick(candlesticks)
-			evaluator.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
-			evaluator.add_ichimatsu(candlesticks, num_sets)
-			evaluator.end_plotter('signal.png', False)
-			notify_from_line('progress', image='signal.png')
+	#Output
+	#timeframes = list(candlesticks.keys())
+	plothelper = PlotHelper()
+	plothelper.begin_plotter()
+	plothelper.add_candlestick(candlesticks)
+	plothelper.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
+	plothelper.add_zebratail(candlesticks, num_sets)
+	plothelper.end_plotter('signal.png', True)
 
-	### Algorythm end ###
+def entry(candlesticks, trader, evaluator):
+	if trader.state == 'ORDER':
+		try:
+			is_rise = is_rise_with_zebratail('15min', candlesticks)
+		except TypeError as e:
+			print(f'{e}')
+			return default_error
 
+		kind = 'BUY' if True is is_rise else 'SELL'
 
-def settle(key, candlesticks, trader, evaluator):
-	"""
-	-------------------------
-	#決済を行うかどうかを判断
-	#(now)15分足が2本更新された際に決済を行う
-	"""
-	if key == '15min' and trader.state == 'POSITION':
+		is_order_created = trader.test_create_order(is_rise)
+		evaluator.set_order(kind, True)
+		print(kind)
+
+		if True is is_order_created:
+			#ORDER状態からORDERWAITINGに状態遷移
+			trader.switch_state()
+
+def settle(candlesticks, trader, evaluator):
+	if trader.state == 'POSITION':
 		#ポジションを決済可能か
 		if trader.can_close_position() is True:
 			#決済の注文を発行する
@@ -503,10 +497,15 @@ def settle(key, candlesticks, trader, evaluator):
 				threshold = 2
 				correct[k] = np.mean(x[k][-threshold:])
 
-			evaluator.set_close()
+			evaluator.set_close(True)
 
 			#LINE notification
-			evaluator.output_close()
+			#timeframes = list(candlesticks.keys())
+			plothelper = PlotHelper()
+			plothelper.begin_plotter()
+			plothelper.add_candlestick(candlesticks)
+			plothelper.end_plotter('close.png', True)
+
 			evaluator.log_score()
 
 			#決済の注文が発行されたか
@@ -521,10 +520,11 @@ def settle(key, candlesticks, trader, evaluator):
 		trader.update_whether_closing_position()
 
 def main():
-	timeframes = {
-		'15min': RNNparam('15min').tau,
-		'4H': RNNparam('4H').tau
-	}
+	#timeframes = {
+	#	'5min': RNNparam('5min').tau,
+	#	'15min': RNNparam('15min').tau
+	#}
+	timeframes = CommonParam().timeframes
 
 	instrument = 'GBP_JPY'
 	environment = 'demo'
