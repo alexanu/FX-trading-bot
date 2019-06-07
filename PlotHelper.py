@@ -9,7 +9,7 @@ class PlotHelper:
 			self.timeframes = common_param.timelist
 		else:
 			self.timeframes = list(timeframes)
-		self.nrows = len(timeframes)
+		self.nrows = len(self.timeframes)
 		self.ncols = 1
 		self.figsize = (9, 3 * self.nrows)
 

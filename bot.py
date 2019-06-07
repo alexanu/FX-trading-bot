@@ -455,8 +455,8 @@ def output_zebratail(src, candlesticks, slope, intercept, num_set):
 
 	#Output
 	print('AAAAAAAAAAAAA')
-	timeframes = list(candlesticks.keys())
-	plothelper = PlotHelper(timeframes)
+	#timeframes = list(candlesticks.keys())
+	plothelper = PlotHelper()
 	plothelper.begin_plotter()
 	plothelper.add_candlestick(candlesticks)
 	plothelper.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
@@ -501,8 +501,8 @@ def settle(candlesticks, trader, evaluator):
 			evaluator.set_close(True)
 
 			#LINE notification
-			timeframes = list(candlesticks.keys())
-			plothelper = PlotHelper(timeframes)
+			#timeframes = list(candlesticks.keys())
+			plothelper = PlotHelper()
 			plothelper.begin_plotter()
 			plothelper.add_candlestick(candlesticks)
 			plothelper.end_plotter('close.png', True)
