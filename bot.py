@@ -192,7 +192,7 @@ def initialize(timeframes, instrument, environment='demo'):
 		'1M': 'M'
 	}
 
-	#timeframsの情報をもとにCandleStickを生成,時間足をキーとして地所型に格納
+	#timeframesの情報をもとにCandleStickを生成,時間足をキーとして地所型に格納
 	candlesticks = {t: CandleStick(t, c) for t, c in timeframes.items()}
 
 	#APIを叩くhandler呼び出し
@@ -365,7 +365,7 @@ def test_driver(candlesticks, instrument, environment='demo'):
 				if can_update(recv, v) is True:
 					v.update_ohlc_()
 					print(k)
-					print(v.ohlc)
+					#print(v.ohlc)
 					print(len(v.ohlc))
 
 					if k == '5min':
@@ -454,8 +454,9 @@ def output_zebratail(src, candlesticks, slope, intercept, num_set):
 	num_sets[src] = num_set
 
 	#Output
-	#timeframes = list(candlesticks.keys())
-	plothelper = PlotHelper()
+	print('AAAAAAAAAAAAA')
+	timeframes = list(candlesticks.keys())
+	plothelper = PlotHelper(timeframes)
 	plothelper.begin_plotter()
 	plothelper.add_candlestick(candlesticks)
 	plothelper.add_tail_oc_slope(candlesticks, slopes, intercepts, num_sets)
@@ -500,8 +501,8 @@ def settle(candlesticks, trader, evaluator):
 			evaluator.set_close(True)
 
 			#LINE notification
-			#timeframes = list(candlesticks.keys())
-			plothelper = PlotHelper()
+			timeframes = list(candlesticks.keys())
+			plothelper = PlotHelper(timeframes)
 			plothelper.begin_plotter()
 			plothelper.add_candlestick(candlesticks)
 			plothelper.end_plotter('close.png', True)
