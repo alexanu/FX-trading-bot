@@ -39,8 +39,9 @@ fxTrade Practice(Demo) The Demo (virtual) environment
 default_error = -1
 
 #Global param
-entry_freq = '5min'
-target_freq = '15min'
+#entry_freq = '5min'
+#target_freq = '15min'
+param = CommonParam()
 
 def accumulate_timeframe(response, candlestick, strategy):
 	"""
@@ -368,7 +369,7 @@ def test_driver(candlesticks, instrument, environment='demo'):
 					#print(v.ohlc)
 					print(len(v.ohlc))
 
-					if k == '5min':
+					if k == param.entry_freq:
 						#エントリー
 						entry(candlesticks, trader, evaluator)
 						#決済（クローズ）
@@ -454,7 +455,6 @@ def output_zebratail(src, candlesticks, slope, intercept, num_set):
 	num_sets[src] = num_set
 
 	#Output
-	print('AAAAAAAAAAAAA')
 	#timeframes = list(candlesticks.keys())
 	plothelper = PlotHelper()
 	plothelper.begin_plotter()
@@ -466,7 +466,7 @@ def output_zebratail(src, candlesticks, slope, intercept, num_set):
 def entry(candlesticks, trader, evaluator):
 	if trader.state == 'ORDER':
 		try:
-			is_rise = is_rise_with_zebratail('15min', candlesticks)
+			is_rise = is_rise_with_zebratail(param.target, candlesticks)
 		except TypeError as e:
 			print(f'{e}')
 			return default_error
@@ -482,9 +482,10 @@ def entry(candlesticks, trader, evaluator):
 			trader.switch_state()
 
 def settle(candlesticks, trader, evaluator):
+	threshold = 2
 	if trader.state == 'POSITION':
 		#ポジションを決済可能か
-		if trader.can_close_position() is True:
+		if trader.can_close_position(threshold) is True:
 			#決済の注文を発行する
 			is_position_closed = trader.test_close_position()
 
@@ -493,9 +494,6 @@ def settle(candlesticks, trader, evaluator):
 			for k, v in candlesticks.items():
 				x[k] = v.normalize_by('close').values
 				#or x[k] = v.normalize_by('close' raw=True)
-
-				#要修正
-				threshold = 2
 				correct[k] = np.mean(x[k][-threshold:])
 
 			evaluator.set_close(True)
@@ -518,7 +516,7 @@ def settle(candlesticks, trader, evaluator):
 		else:
 			debug_print('Position can not be closed in this update')
 		#決済するかを判断するアルゴリズムを更新
-		trader.update_whether_closing_position()
+		trader.update_whether_closing_position(threshold)
 
 def main():
 	#timeframes = {

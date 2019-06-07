@@ -107,15 +107,15 @@ class Trader:
 		print('Close position')
 		return True
 
-	def can_close_position(self):
-		threshold = 1
-		if self.count > threshold:
+	#fix me(threshold)
+	def can_close_position(self, threshold):
+		if self.count == threshold:
 			return True
 		else:
 			return False
 
-	def update_whether_closing_position(self):
-		if self.can_close_position() is True:
+	def update_whether_closing_position(self, threshold):
+		if self.can_close_position(threshold) is True:
 			self.count = 0
 		else:
 			self.count += 1
