@@ -264,7 +264,7 @@ def all_element_in(signals):
 		debug_print('Stop running and Do debug.')
 		return None
 
-def calc_trendline(candlesticks, price='high'):
+def calc_trendline(candlesticks, length, price='high'):
 	"""
 	ローソク足をもとにトレンドラインを自動生成する
 
@@ -279,6 +279,7 @@ def calc_trendline(candlesticks, price='high'):
 	intercepts = {}
 	ohlc = {}
 	for k, v in candlesticks.items():
+		#ohlc[k] = v.ohlc.copy()[-length:]
 		ohlc[k] = v.ohlc.copy()
 		ohlc[k] = (ohlc[k] - ohlc[k].min()) / (ohlc[k].max() - ohlc[k].min())
 		ohlc[k]['time_id'] = np.array([i+1 for i in range(len(ohlc[k]))])
@@ -370,8 +371,12 @@ def test_driver(candlesticks, instrument, environment='demo'):
 					print(len(v.ohlc))
 
 					if k == param.entry_freq:
-						#エントリー
-						entry(candlesticks, trader, evaluator)
+						try:
+							#エントリー
+							entry(candlesticks, trader, evaluator)
+						except (RuntimeError, ValueError) as e:
+							print(f'{e}')
+
 						#決済（クローズ）
 						settle(candlesticks, trader, evaluator)
 
@@ -463,7 +468,60 @@ def output_zebratail(src, candlesticks, slope, intercept, num_set):
 	plothelper.add_zebratail(candlesticks, num_sets)
 	plothelper.end_plotter('signal.png', True)
 
+def is_rise_with_trendline(src, candlesticks, length):
+	h_slopes, _ = calc_trendline(candlesticks, length, price='high')
+	l_slopes, _ = calc_trendline(candlesticks, length, price='low')
+
+	print(f'slope[high] : {np.sign(h_slopes[src])}')
+	print(f'slope[low ] : {np.sign(l_slopes[src])}')
+
+	if np.sign(h_slopes[src]) != np.sign(l_slopes[src]):
+		print('Unstable')
+		raise TypeError('is_rise_with_trendline : Return no boolean value(i.e. None)')
+
+	if h_slopes[src] > 0 and l_slopes[src] > 0:
+		return True
+	else:
+		return False
+
 def entry(candlesticks, trader, evaluator):
+	if trader.state == 'ORDER':
+		is_rises = []
+		error_count = 0
+
+		try:
+			length = 10
+			is_rises.append(is_rise_with_trendline(param.target, candlesticks, length))
+		except TypeError as e:
+			print(f'{e}')
+			error_count += 1
+
+		try:
+			is_rises.append(is_rise_with_zebratail(param.target, candlesticks))
+		except TypeError as e:
+			print(f'{e}')
+			error_count += 1
+
+		if error_count > 0:
+			print(f'Error count : {error_count}')
+			raise RuntimeError('entry : error count is not 0')
+
+		if (all(is_rises) is True or any(is_rises) is False) is False:
+			print('Unstable: ENTRY')
+			raise ValueError('entry : is_rises is not [All True] or [All False]')
+
+		is_rise = all(is_rises)
+		kind = 'BUY' if True is is_rise else 'SELL'
+
+		is_order_created = trader.test_create_order(is_rise)
+		evaluator.set_order(kind, True)
+		print(kind)
+
+		if True is is_order_created:
+			#ORDER状態からORDERWAITINGに状態遷移
+			trader.switch_state()
+
+def _entry(candlesticks, trader, evaluator):
 	if trader.state == 'ORDER':
 		try:
 			is_rise = is_rise_with_zebratail(param.target, candlesticks)
@@ -482,7 +540,7 @@ def entry(candlesticks, trader, evaluator):
 			trader.switch_state()
 
 def settle(candlesticks, trader, evaluator):
-	threshold = 2
+	threshold = 8
 	if trader.state == 'POSITION':
 		#ポジションを決済可能か
 		if trader.can_close_position(threshold) is True:
@@ -537,6 +595,7 @@ def main():
 
 	#driver(candlesticks, instrument, environment)
 	test_driver(candlesticks, instrument, environment)
+	print("OVER")
 
 if __name__ == "__main__":
 	main()
