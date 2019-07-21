@@ -95,6 +95,19 @@ class CandleStick:
 #			return True
 #		else:
 #			return False
+
+	def can_update(self, recv, mode=None):
+		dummy_tick = pd.Series(float(recv['bids'][0]['price']),index=[pd.to_datetime(recv['time'])])
+		dummy_tickdata = self.tickdata.append(dummy_tick)
+		dummy_ohlc = dummy_tickdata.resample(self.rate).ohlc()
+
+		num_candle = candlestick.count if mode is 'init' else 0
+
+		if((num_candle + 2) <= len(dummy_ohlc)):
+			return True
+		else:
+			return False
+
 	def normalize(self):
 		#numpy
 		return (self.ohlc - self.ohlc.values.min()) / (self.ohlc.values.max() - self.ohlc.values.min())
