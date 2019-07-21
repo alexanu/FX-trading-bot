@@ -59,11 +59,9 @@ $pip3 install -r requirements.txt
 
 #### 今後の予定
 - close用のアルゴリズム
-- RNNの多層化
-- bot.py内のクラスを別ファイルに分割
-- 並列化
+- RNNの多層化->統計処理のアルゴリズム実装のためしばらく休止
+- 並列化->Pythonのスレッド並列実装のコストとメリットが見合わないため先送り
 - tqdmからfastprogressへ切り替え
 
 #### bug fix
-- クラスを分割する際にdebug_print関数を呼び出せなくなっていたため修正
-- 決済用の関数（settle_persimon）の引数が間違っていたため修正
+- Connectionが切れたときの復帰処理の漏れを修正
