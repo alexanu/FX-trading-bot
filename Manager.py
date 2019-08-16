@@ -4,6 +4,9 @@ import pandas as pd
 #for Exception
 import requests
 
+#for Sleep
+import time
+
 #User difined classes
 from OandaEndpoints import Pricing
 from OandaCandleStick import CandleStick
@@ -109,6 +112,7 @@ class Manager:
 			except ConnectionError as e:
 				print(f'connect_to_stream : Catch {e}')
 				print(f'connect_to_stream : Retry to Connect')
+				time.sleep(1)
 				continue
 
 			try:
@@ -116,6 +120,7 @@ class Manager:
 			except requests.exceptions.ChunkedEncodingError as e:
 				print(f'run : Catch {e}')
 				print(f'run : Retry to Connect')
+				time.sleep(1)
 				continue
 
 	def run(self, resp, candlesticks):
@@ -178,6 +183,7 @@ class Manager:
 			is_rises = []
 			error_count = 0
 
+			"""
 			try:
 				length = 10
 				is_rises.append(is_rise_with_trendline(self.param.target, candlesticks, length))
@@ -188,6 +194,24 @@ class Manager:
 			try:
 				is_rises.append(is_rise_with_zebratail(self.param.target, candlesticks))
 			except TypeError as e:
+				print(f'{e}')
+				error_count += 1
+			"""
+			try:
+				is_rises.append(is_rise_with_insidebar(self.param.target, candlesticks, length))
+			except ValueError as e:
+				print(f'{e}')
+				error_count += 1
+
+			try:
+				is_rises.append(is_rise_with_line_touch(self.param.target, candlesticks))
+			except ValueError as e:
+				print(f'{e}')
+				error_count += 1
+
+			try:
+				is_rises.append(is_rise_with_trendline_maxarea(self.param.target, candlesticks))
+			except ValueError as e:
 				print(f'{e}')
 				error_count += 1
 

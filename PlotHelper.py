@@ -24,17 +24,33 @@ class PlotHelper:
 		if notify is True:
 			notify_from_line(f'Output {file_name}', image=file_name)
 
+	"""
 	def add_tail_oc_slope(self, candlesticks, slopes, intercepts, num_sets):
 		for i, k in enumerate(self.timeframes):
 			if k in slopes:
 				self.plotter.plot_tail_oc_slope(candlesticks[k].ohlc,slopes[k],intercepts[k],num_sets[k], i)
+	"""
 
+	"""
+	def add_insidebar(self, candlesticks, nums):
+		for i, k in enumerate(self.timeframes):
+			if k in nums:
+				self.plotter.plot_insidebar(candlesticks[k].ohlc, nums[k], i)
+	"""
+
+	def add_box(self, candlesticks, extents):
+		for i, k in enumerate(self.timeframes):
+			if k in extents:
+				self.plotter.plot_box(candlesticks[k].ohlc, extents[k], i)
+
+	"""
 	def add_zebratail(self, candlesticks, num_sets):
 		for i, k in enumerate(self.timeframes):
 			if k in num_sets:
-				self.plotter.plot_ichimatsu(candlesticks[k].ohlc, num_sets[k], i)
+				self.plotter.plot_zebratail(candlesticks[k].ohlc, num_sets[k], i)
+	"""
 
-	def add_candlestick(self, candlesticks):
+	def add_ohlc(self, candlesticks):
 		for i, k in enumerate(self.timeframes):
 			if k in candlesticks:
 				self.plotter.plot_ohlc(candlesticks[k].ohlc, i)
@@ -51,6 +67,7 @@ class PlotHelper:
 			if k in slopes['low']:
 				self.plotter.plot_trendline(candlesticks[k].ohlc,slopes['low'][k],intercepts['low'][k], i)
 
+	"""
 	def add_predicted(self, x, predicted):
 		for i, k in enumerate(self.timeframes):
 			if k in self.predicted:
@@ -60,3 +77,4 @@ class PlotHelper:
 		for i, k in enumerate(self.timeframes):
 			if k in x_ordered:
 				self.plotter.plot(x[k], i)
+	"""
