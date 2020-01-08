@@ -1,14 +1,17 @@
 import time
-import json
+
 from OandaEndpoints import Order, Position, Pricing, Instrument
 
+from OandaEndpoints import from_response_to_dict
 
+"""
 def from_response_to_dict(response):
 	try:
 		return json.loads(response.content.decode('UTF-8'))
 	except Exception as e:
 		print("Caught exception when converting message into json : {}" .format(str(e)))
 		return None
+"""
 
 class Trader:
 	def __init__(self, instrument, environment='demo', mode='test'):
@@ -51,9 +54,9 @@ class Trader:
 
 	def test_create_order(self, is_rise=None):
 		if is_rise is True:
-			debug_print('BUY')
+			print('BUY')
 		elif is_rise is False:
-			debug_print('SELL')
+			print('SELL')
 		else:
 			return False
 				
@@ -62,14 +65,14 @@ class Trader:
 	def create_order(self, is_rise=None):
 		if is_rise is True:
 			if self.mode == 'test':
-				debug_print('BUY')
+				print('BUY')
 			else:
 				self.market_order('BUY', self.instrument, 10)
 				time.sleep(1)
 				print('create order BUY')
 		elif is_rise is False:
 			if self.mode == 'test':
-				debug_print('SELL')
+				print('SELL')
 			else:
 				self.market_order('SELL', self.instrument, 10)
 				time.sleep(1)
@@ -81,7 +84,7 @@ class Trader:
 
 	def test_close_position(self):
 		#for debug
-		debug_print('Close position')
+		print('Close position')
 		return True
 
 	def close_position(self):
@@ -104,15 +107,15 @@ class Trader:
 		print('Close position')
 		return True
 
-	def can_close_position(self):
-		threshold = 1
-		if self.count > threshold:
+	#fix me(threshold)
+	def can_close_position(self, threshold):
+		if self.count == threshold:
 			return True
 		else:
 			return False
 
-	def update_whether_closing_position(self):
-		if self.can_close_position() is True:
+	def update_whether_closing_position(self, threshold):
+		if self.can_close_position(threshold) is True:
 			self.count = 0
 		else:
 			self.count += 1
@@ -200,7 +203,7 @@ class Trader:
 				order_id = order_dic['orders'][i]['id']
 				self.order.cancel_order(order_id)
 				time.sleep(1)
-			debug_print('cancel order')
+			print('cancel order')
 
 		#Oandaのサーバー上に反映されるまで待つ
 		while self.has_order(order_dic) is True:
@@ -221,7 +224,7 @@ class Trader:
 						}
 						self.position.close_position(data, instrument)
 						time.sleep(1)
-			debug_print('close positon')
+			print('close positon')
 
 		#Oandaのサーバー上に反映されるまで待つ
 		while self.has_position(pos_dic) is True:

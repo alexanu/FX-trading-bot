@@ -7,6 +7,7 @@ class Plotter:
 	def __init__(self, nrows, ncols, figsize):
 		self.fig, self.axes = plt.subplots(nrows=nrows,ncols=ncols,figsize=figsize,squeeze=False)
 
+	"""
 	def plot(self, x, row, col=0):
 		self.axes[row, col].plot(x, color='royalblue')
 
@@ -17,6 +18,7 @@ class Plotter:
 	def plot_correct(self, x, correct, row, col=0):
 		tmp = np.append(x, correct)
 		self.axes[row,col].plot(tmp, color='royalblue')
+	"""
 		
 	def plot_ohlc(self, ohlc, row, col=0):
 		#ohlc = (ohlc - ohlc.min()) / (ohlc.max() - ohlc.min())
@@ -45,6 +47,7 @@ class Plotter:
 	def set_ylim(self, y_min, y_max, row, col=0):
 		self.axes[row, col].set_ylim(y_min, y_max)
 
+	"""
 	def set_for_score(self):
 		pass
 
@@ -53,18 +56,44 @@ class Plotter:
 
 	def set_for_order(self):
 		pass
+	"""
 
+	def plot_box(self, ohlc, extent, row, col=0):
+		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
+		ranged_ohlc = ohlc[extent[0]:extent[1]]
+		length = extent[1] - extent[0]
+		padding = 0.5 + 0.1
+
+		xy = (extent[0] - padding, ranged_ohlc.values.min())
+		width = length + 0.2
+		height = ranged_ohlc.values.max() - ranged_ohlc.values.min()
+
+		ec='#990000'
+		rect = patches.Rectangle(xy=xy, width=width, height=height, ec=ec, fill=False)
+		self.axes[row,col].add_patch(rect)
+
+
+	"""
 	def plot_tail_oc_slope(self, ohlc, slope, intercept, num_set, row, col=0):
 		x = np.array([i + 1 for i in range(num_set)])
 		y = slope * x + intercept
 		self.axes[row,col].plot([len(ohlc) - i - 1 for i in reversed(range(num_set))],y[-num_set:])
+	"""
 
-	def plot_ichimatsu(self, ohlc, num_set, row, col=0):
-		print(ohlc[-num_set:])
-		print(ohlc[-num_set:].max())
-		print(np.max(ohlc[-num_set:].max().values))
-		print(ohlc[-num_set:].values.max())
-		
+	"""
+	def plot_insidebar(self, ohlc, num, row, col=0):
+		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
+
+		xy = (len(ohlc) - num - 0.5 - 0.1, ohlc[-num:].values.min())
+		width = num + 0.2
+		height = ohlc[-num:].values.max() - ohlc[-num:].values.min()
+		ec='#990000'
+		rect = patches.Rectangle(xy=xy, width=width, height=height, ec=ec, fill=False)
+		self.axes[row,col].add_patch(rect)
+	"""
+
+	"""
+	def plot_zebratail(self, ohlc, num_set, row, col=0):
 		ohlc = (ohlc - ohlc.values.min()) / (ohlc.values.max() - ohlc.values.min())
 
 		xy = (len(ohlc) - num_set - 0.5 - 0.1, ohlc[-num_set:].values.min())
@@ -74,6 +103,7 @@ class Plotter:
 		rect = patches.Rectangle(xy=xy, width=width, height=height, ec=ec, fill=False)
 		print(rect)
 		self.axes[row,col].add_patch(rect)
+	"""
 
 	def plot_trendline(self, ohlc, slope, intercept, row, col=0):
 		ohlc = (ohlc - ohlc.min()) / (ohlc.max() - ohlc.min())

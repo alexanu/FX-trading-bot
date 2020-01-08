@@ -96,6 +96,37 @@ class CandleStick:
 #		else:
 #			return False
 
+	def can_update(self, recv, mode=None):
+		dummy_tick = pd.Series(float(recv['bids'][0]['price']),index=[pd.to_datetime(recv['time'])])
+		dummy_tickdata = self.tickdata.append(dummy_tick)
+		dummy_ohlc = dummy_tickdata.resample(self.rate).ohlc()
+
+		num_candle = candlestick.count if mode is 'init' else 0
+
+		if((num_candle + 2) <= len(dummy_ohlc)):
+			return True
+		else:
+			return False
+
+	def normalize(self):
+		#numpy
+		return (self.ohlc - self.ohlc.values.min()) / (self.ohlc.values.max() - self.ohlc.values.min())
+
+	def normalize_each(self):
+		#pandas
+		return (self.ohlc - self.ohlc.min()) / (self.ohlc.max() - self.ohlc.min())
+
+
+	"""
+		list = ['open', 'high', 'low', 'close']
+		normalised_vec = [normalize_by(key) for key in list]
+	"""
+	def normalize_by(self, key='close', raw=False):
+		if raw is True:
+			return ((self.ohlc[key] - self.ohlc[key].values.min()) / (self.ohlc[key].values.max() - self.ohlc[key].values.min())).values
+		else:
+			return (self.ohlc[key] - self.ohlc[key].values.min()) / (self.ohlc[key].values.max() - self.ohlc[key].values.min())
+
 def main():
 	print("This class is FXData")
 

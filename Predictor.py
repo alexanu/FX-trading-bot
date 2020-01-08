@@ -54,18 +54,15 @@ class Predictor:
 		self.predicted = None
 		self.loaded = False
 
-		self.x_max = None
-		self.x_min = None
-		self.is_normalized = False
+		#self.x_max = None
+		#self.x_min = None
+		#self.is_normalized = False
 
 	def reset(self):
 		self.predicted = None
 		self.loaded = False
 
-	def to_RNNvector(self, x):
-		x_rnn = np.array([[x]]).transpose(0,2,1)
-		return x_rnn
-
+	"""
 	def from_ohlc_to_vector(self, candlestick, key='close'):
 		x = candlestick[key].values
 		return x
@@ -89,26 +86,49 @@ class Predictor:
 			return x * (self.x_max - self.x_min) + self.x_min
 		else:
 			return x
+	"""
+
+	def to_rnn_input(self, x, elem='close'):
+		#if have single element
+		if elem == 'open' or elem == 'high' or elem == 'low' or elem == 'close':
+			return np.array([[x]]).transpose(0,2,1)
+		else:
+			#elem='ohlc'
+			#for OHLC data
+			pass
 
 	def is_fall(self, candlestick):
+		if self.is_rise(candlestick) is not True:
+			return True
+		else:
+			return False
+		"""
 		#predicted = self.predicted if loaded is True else self.rnn.predict(candlestick)
 		if self.loaded is True:
 			predicted = self.predicted
 		else:
-			predicted = self.rnn.predict(candlestick)
+			x_rnn = self.to_rnn_input(candlestick)
+			predicted = self.rnn.predict(x_rnn)
 
 		if np.sign(predicted - candlestick[-1]) < 0:
 			return True
 		else:
 			return False
+		"""
 
 	def is_range(self, candlestick):
+		if self.is_trend(candlestick) is not True:
+			return True
+		else:
+			return False
+		"""
 		#predicted = self.predicted if loaded is True else self.rnn.predict(candlestick)
 
 		if self.loaded is True:
 			predicted = self.predicted
 		else:
-			predicted = self.rnn.predict(candlestick)
+			x_rnn = self.to_rnn_input(candlestick)
+			predicted = self.rnn.predict(x_rnn)
 
 		threshold = 0.2
 		diff = np.abs(predicted - candlestick[-1])
@@ -119,14 +139,24 @@ class Predictor:
 		else:
 			print('is_range false')
 			return False
+		"""
+
+	def calc_predict(self, candlestick):
+		if self.is_loaded() is True:
+			return self.predicted
+		else:
+			return self.rnn.predict(self.to_rnn_input(candlestick))
 
 	def is_rise(self, candlestick):
 		#predicted = self.predicted if loaded is True else self.rnn.predict(candlestick)
-
+		"""
 		if self.loaded is True:
 			predicted = self.predicted
 		else:
-			predicted = self.rnn.predict(candlestick)
+			x_rnn = self.to_rnn_input(candlestick)
+			predicted = self.rnn.predict(x_rnn)
+		"""
+		predicted = self.calc_predict(candlestick)
 
 		if np.sign(predicted - candlestick[-1]) > 0:
 			return True
@@ -135,14 +165,18 @@ class Predictor:
 
 	def is_trend(self, candlestick):
 		#predicted = self.predicted if loaded is True else self.rnn.predict(candlestick)
-
+		"""
 		if self.loaded is True:
 			predicted = self.predicted
 		else:
-			predicted = self.rnn.predict(candlestick)
+			x_rnn = self.to_rnn_input(candlestick)
+			predicted = self.rnn.predict(x_rnn)
+		"""
 
-		debug_print(predicted)
-		debug_print(candlestick[-1])
+		predicted = self.calc_predict(candlestick)
+
+		print(predicted)
+		print(candlestick[-1])
 
 		threshold = 0.1
 		diff = np.abs(predicted - candlestick[-1])
@@ -155,7 +189,8 @@ class Predictor:
 			return False
 
 	def preset_prediction(self, x):
-		self.predicted = self.rnn.predict(x)
+		x_rnn = self.to_rnn_input(x)
+		self.predicted = self.rnn.predict(x_rnn)
 		self.loaded = True
 		print('preset prediction')
 		return self.predicted

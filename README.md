@@ -11,6 +11,26 @@
 - You can use RNN or LSTM to analyze candle stick data
 - It send trade imformation to you by using LINE notify
 
+# 使い方
+```
+$python3 bot.py auth.json
+```
+実行には認証用のjson形式の認証キー（auth.json）が必要となります。
+認証キーには以下の3つが格納されています。
+- LINE notify token
+- Oanda id
+- Oanda token
+
+jsonの内容は以下のようになっています。
+```
+{
+ "line_token": "your LINE notify token", 
+ "oanda_id": "XXX-XXX-XXXXXXX-XXX",
+ "oanda_token": "your oanda token"
+}
+```
+
+
 #### 必要なもの（required）
 - Oanda Rest API V20のアカウントとトークン
 - (LINE通知機能を使用する場合）LINE notify用のトークン
@@ -23,13 +43,13 @@
 - TensorFlow
 - matplotlib
 - mpl_finance
-- sys
-- json
 - tqdm
-- requests
 - scipy
-- time
-- sklearn
+- scikit-learn
+以上の依存するモジュールはrequirements.txtを用いてまとめて取得することができる
+```
+$pip3 install -r requirements.txt
+```
 
 #### 実装済み
 - トレンドラインの自動生成
@@ -39,7 +59,9 @@
 
 #### 今後の予定
 - close用のアルゴリズム
-- RNNの多層化
-- bot.py内のクラスを別ファイルに分割
-- 並列化
+- RNNの多層化->統計処理のアルゴリズム実装のためしばらく休止
+- 並列化->Pythonのスレッド並列実装のコストとメリットが見合わないため先送り
 - tqdmからfastprogressへ切り替え
+
+#### bug fix
+- Connectionが切れたときの復帰処理の漏れを修正

@@ -16,7 +16,7 @@ class RNNparam:
 			t_form = ['average', 15]
 
 		if rate == '5min':
-			tau = 60
+			tau = 45
 			t_form = ['average', 15]
 
 		if rate == '15min':
@@ -24,7 +24,7 @@ class RNNparam:
 			t_form = ['average', 15]
 
 		if rate == '4H':
-			tau = 60
+			tau = 45
 			t_form = ['average', 15]
 
 
