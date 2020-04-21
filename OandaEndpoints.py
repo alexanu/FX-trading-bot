@@ -76,7 +76,26 @@ class Account(Endpoints):
 
 
 class Instrument(Endpoints):
+
+	"""
+
+	通貨ペアの情報を取り扱うクラス
+
+	"""
+
 	def __init__(self, environment='demo'):
+
+		"""
+
+		トレード環境を設定する
+
+		Parameter
+		---------
+		environment : str
+			トレード環境（本番or仮想）を指定
+
+		"""
+
 		super().__init__(environment=environment)
 		self._api_url = 'https://{}/v3/instruments'.format(self._api_domain)
 
@@ -86,10 +105,10 @@ class Instrument(Endpoints):
 
 		Parameters
 		----------
-		instrument: 通貨ペア
-		price: ['defualt='M'(mid point candle)], 'A'(ask candle), 'B'(bid candle)
-		granularity: 時間足[default='S5']
-		count: ローソク足の本数[default=500]
+		instrument : 通貨ペア
+		price : ['defualt='M'(mid point candle)], 'A'(ask candle), 'B'(bid candle)
+		granularity : 時間足[default='S5']
+		count : ローソク足の本数[default=500]
 		"""
 		suffix = '/{}/candles'.format(instrument)
 		params = {

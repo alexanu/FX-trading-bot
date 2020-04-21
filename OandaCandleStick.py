@@ -14,6 +14,20 @@ Refference from pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-alia
 
 class CandleStick:
 	def __init__(self, rate, count=None):
+
+		"""
+
+		解析対象のローソク足の時間スケールと本数を定義する
+
+		Parameter
+		---------
+		tickdata : pandas.Series
+		ohlc :
+		rate : str
+		count : int
+		removable(=1) : int
+		"""
+
 		self.tickdata = pd.Series([])
 		self.ohlc = None
 		self.rate = rate
