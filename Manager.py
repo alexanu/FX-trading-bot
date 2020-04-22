@@ -1,28 +1,17 @@
 import numpy as np
 import pandas as pd
-
-#for Exception
 import requests
-
-#for Sleep
 import time
 
-#User difined classes
+#User defined classes
 from OandaEndpoints import Pricing
 from OandaCandleStick import CandleStick
-#from predict_RNN import RNNPredictor
-#from RNNparam import RNNparam
-#from Fetter import Fetter
-#from Plotter import Plotter
-#from Predictor import Predictor
 from Trader import Trader
 from Evaluator import Evaluator
 from PlotHelper import PlotHelper
-
-#User difined functions
 from Notify import notify_from_line
 from OandaEndpoints import from_byte_to_dict, from_response_to_dict
-from Analysis import is_rise_with_zebratail, is_rise_with_trendline
+from Analysis import is_rise_with_trendline
 
 #def can_update(recv, candlestick, mode=None):
 #	"""
@@ -48,7 +37,46 @@ from Analysis import is_rise_with_zebratail, is_rise_with_trendline
 #		return False
 
 class Manager:
-	def __init__(self, param, instrument, environment='demo', mode='test'):
+
+	"""
+
+	売買のタイミングを管理するクラス
+	"""
+	
+	def __init__(self, param: list, instrument: str, environment: str='demo', mode: str='test'):
+		"""
+
+		トレードの対象となる通貨ペアと時間足（種類と本数）を定義
+
+		Parameter
+		---------
+		param : list
+			取り扱う時間足のリスト
+		instrument : str
+			取り扱う通貨ペア
+		environment : str
+			トレード環境（本番or仮想)を指定
+		mode : str
+			デバッグ用の出力を行うかどうかを指定
+
+		Self
+		----
+		param : list
+			取り扱う時間足のリスト
+		instrument : str
+			取り扱う通貨ペア
+		environment : str
+			トレード環境（本番or仮想)を指定
+		trader : Trader (User defined)
+		evaluator : Evaluator (User defined)
+		checking_freq : int (const)
+			画面出力の頻度を決定するための定数
+		count : int
+			画面出力のための内部カウンタ
+		
+
+		"""
+
 		self.instrument = instrument
 		self.environment = environment
 		self.param = param
@@ -57,7 +85,7 @@ class Manager:
 		#self.fetters = {k: Fetter(k) for k in param.timelist}
 		self.evaluator = Evaluator(self.param.timelist, instrument, environment)
 
-		self.checking_freq = 0
+		self.checking_freq = 10
 		self.count = 0
 
 	def __del__(self):
@@ -84,7 +112,9 @@ class Manager:
 			return False
 
 	def driver(self, candlesticks):
+
 		"""
+
 		ローソク足データの収集、解析、取引を取り扱う
 
 		Parameters
@@ -95,13 +125,12 @@ class Manager:
 			取引を行う環境。バーチャル口座(demo)orリアル口座(live)
 		instrument: str
 			取引を行う通貨	
+
 		"""
-		print('test_driver begin')
-		print('trader was created')
 
 		#現在保有しているポジションをすべて決済
 		self.trader.clean()
-		print('close all position to use trader.clean()')
+		print('<Manager> Close all positions')
 
 		while True:
 			#指定した通貨のtickをストリーミングで取得する
@@ -124,11 +153,26 @@ class Manager:
 				continue
 
 	def run(self, resp, candlesticks):
+
 		"""
-		raise ValueError
-		raise urllib3.exceptions.ProtocolError
-		raise requests.exceptions.Chunked EncodingError
+
+		ストラテジーを元に売買タイミングを決定する
+
+		Parameter
+		---------
+		resp : requests.response
+			ストリーミングでの接続を行うためのレスポンスデータ
+		candlesticks : dict
+			取り扱うローソク足の種類と本数を格納した辞書型
+
+		Exception
+		---------
+		ValueError
+		urllib3.exceptions.ProtocolError
+		requests.exceptions.Chunked EncodingError
+
 		"""
+
 		for line in resp.iter_lines(1):
 			if self.has_price(line):
 				recv = from_byte_to_dict(line)
