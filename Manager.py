@@ -211,7 +211,7 @@ class Manager:
 					self.trader.switch_state()
 			v.append_tickdata(recv)
 
-	def entry(self, candlesticks: dict) -> bool:
+	def entry(self, candlesticks: dict) -> '[bool(whether excute order or not), str(kind)]':
 
 		"""
 
@@ -232,7 +232,8 @@ class Manager:
 
 		if self.trader.state == 'ORDER':
 			is_rises = []
-			error_count = 0
+			error_flag = False
+			#error_count = 0
 
 			"""
 
@@ -250,51 +251,55 @@ class Manager:
 				print(f'{e}')
 				error_count += 1
 
-			> Template(in future)
-			> -------------------
-
-			> try:
-			> 	is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
-			> 	is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
-			> except ValueError as e:
-			> 	print(f'{e}')
-			> 	error_flag = True
-
-
-			"""
-
-			try:
-				is_rises.append(is_rise_with_insidebar(self.param.target, candlesticks, length))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
-
-			try:
-				is_rises.append(is_rise_with_line_touch(self.param.target, candlesticks))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
-
-			try:
-				is_rises.append(is_rise_with_trendline_maxarea(self.param.target, candlesticks))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
-
 			if error_count > 0:
 				print(f'Error count : {error_count}')
 				raise RuntimeError('entry : error count is not 0')
 
+				|
+				v
+
+			 Template(in future)
+			 -------------------
+
+			 try:
+			 	is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+			 	is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+			 except ValueError as e:
+			 	print(f'{e}')
+			 	error_flag = True
+
+			if error_flag is True:
+				raise RuntimeError('entry : message')
+
+			"""
+
+			try:
+				is_rises.append(is_rise_with_xxx(self.param.target, candlesticks))
+				is_rises.append(is_rise_with_yyy(self.param.target, candlesticks))
+			except ValueError as e:
+				print(f'{e}')
+				error_flag = True
+
+			if error_flag is True:
+				raise RuntimeError('entry : One or more entry algorythm(is_rise_with_xxx) throw exception')
+
+#			if error_count > 0:
+#				print(f'Error count : {error_count}')
+#				raise RuntimeError('entry : error count is not 0')
+
 			if (all(is_rises) is True or any(is_rises) is False) is False:
-				print('Unstable: ENTRY')
 				raise ValueError('entry : is_rises is not [All True] or [All False]')
 
 			is_rise = all(is_rises)
-			kind = 'BUY' if True is is_rise else 'SELL'
+
+			#売買両方取り扱う場合（現時点ではオフ）
+			#kind = 'BUY' if True is is_rise else 'SELL'
+
+			#買いの場合のみ取り扱う
+			kind = 'BUY' if True is is_rise else None
 
 			is_order_created = self.trader.test_create_order(is_rise)
 			self.evaluator.set_order(kind, True)
-			print(kind)
 
 			if True is is_order_created:
 				#ORDER状態からORDERWAITINGに状態遷移
