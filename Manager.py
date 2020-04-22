@@ -13,29 +13,6 @@ from Notify import notify_from_line
 from OandaEndpoints import from_byte_to_dict, from_response_to_dict
 from Analysis import is_rise_with_trendline
 
-#def can_update(recv, candlestick, mode=None):
-#	"""
-#	ローソク足が更新可能かを返す, 対象とする時間足を指定する必要はない
-#	for文などで予め対象とするローソク足を抽出する必要あり
-#
-#	Parameters
-#	----------
-#	recv: dict
-#		tickデータを含む受信データ
-#	candlestick: CandleStick
-#		ある時間足のローソク足データ
-#	"""
-#	dummy_tick = pd.Series(float(recv["bids"][0]["price"]),index=[pd.to_datetime(recv["time"])])
-#	dummy_tickdata = candlestick.tickdata.append(dummy_tick)
-#	dummy_ohlc = dummy_tickdata.resample(candlestick.rate).ohlc()
-#
-#	num_candle = candlestick.count if mode is 'init' else 0
-#	
-#	if((num_candle + 2) <= len(dummy_ohlc)):
-#		return True
-#	else:
-#		return False
-
 class Manager:
 
 	"""
@@ -156,7 +133,7 @@ class Manager:
 
 		"""
 
-		ストラテジーを元に売買タイミングを決定する
+		戦略を元に売買を実行する
 
 		Parameter
 		---------
@@ -192,15 +169,27 @@ class Manager:
 					self.trader.switch_state()
 			self.count = 0 if self.checking_freq == self.count else (self.count + 1)
 
-	def execute_strategy(self, recv, candlesticks):
+	def execute_strategy(self, recv: dict, candlesticks: dict):
+		
+		"""
+		売買の戦略を決定し、売買タイミングを決定する
+
+		Parameter
+		---------
+		recv : dict
+			為替のtickデータが格納された辞書型のデータ
+		candlesticks : dict
+			1つ、またはそれ以上のローソク足の組
+
+		"""
+
 		for k, v in candlesticks.items():
-			#if can_update(recv, v) is True:
 			if v.can_update(recv) is True:
 				v.update_ohlc_()
-				print(k)
-				print(len(v.ohlc))
+				print(f'{k} is updated -> total length : {len(v.ohlc)}')
 
 				if k == self.param.entry_freq:
+
 					try:
 						#エントリー
 						self.entry(candlesticks)
@@ -222,25 +211,58 @@ class Manager:
 					self.trader.switch_state()
 			v.append_tickdata(recv)
 
-	def entry(self, candlesticks):
+	def entry(self, candlesticks: dict) -> bool:
+
+		"""
+
+		エントリー状態に遷移させる
+		is_rise_with_xxx（任意のアルゴリズム）によって戦略を決定
+		現状、「買い」（今後上昇するかのみ）のための設計
+		
+		Parameter
+		---------
+		candlesticks : dict
+			1つ、またはそれ以上のローソク足の組
+
+		Exception
+		---------
+		各is_rise_with_xxxが投げる例外を参照、基本的にValueErrorを推奨
+
+		"""
+
 		if self.trader.state == 'ORDER':
 			is_rises = []
 			error_count = 0
 
 			"""
+
+			Template(now)
+			-------------
 			try:
-				length = 10
-				is_rises.append(is_rise_with_trendline(self.param.target, candlesticks, length))
-			except TypeError as e:
+				is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+			except ValueError as e:
 				print(f'{e}')
 				error_count += 1
 
 			try:
-				is_rises.append(is_rise_with_zebratail(self.param.target, candlesticks))
-			except TypeError as e:
+				is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+			except ValueError as e:
 				print(f'{e}')
 				error_count += 1
+
+			> Template(in future)
+			> -------------------
+
+			> try:
+			> 	is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+			> 	is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+			> except ValueError as e:
+			> 	print(f'{e}')
+			> 	error_flag = True
+
+
 			"""
+
 			try:
 				is_rises.append(is_rise_with_insidebar(self.param.target, candlesticks, length))
 			except ValueError as e:
