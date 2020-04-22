@@ -192,7 +192,10 @@ class Manager:
 
 					try:
 						#エントリー
-						self.entry(candlesticks)
+						(is_order_created, kind) = self.entry(candlesticks)
+						if is_order_created is True:
+							self.evaluator.set_order(kind, True)
+
 					except (RuntimeError, ValueError) as e:
 						print(f'{e}')
 
@@ -211,7 +214,7 @@ class Manager:
 					self.trader.switch_state()
 			v.append_tickdata(recv)
 
-	def entry(self, candlesticks: dict) -> '[bool(whether excute order or not), str(kind)]':
+	def entry(self, candlesticks: dict) -> 'bool, str':
 
 		"""
 
@@ -228,82 +231,97 @@ class Manager:
 		---------
 		各is_rise_with_xxxが投げる例外を参照、基本的にValueErrorを推奨
 
+		Return
+		------
+		is_order_created : bool
+			注文が生成されたかどうか
+		kind : str
+			注文内容'BUY' or 'SELL'
+
 		"""
 
-		if self.trader.state == 'ORDER':
-			is_rises = []
-			error_flag = False
-			#error_count = 0
+		# ORDER状態じゃない場合の例外 here
+		if self.trader.state != 'ORDER':
+			raise ValueError('#entry -> Exception : trader.state is not "ORDER"')
+		# インターフェイスもORDER or not -> order is created & kindへ変更
 
-			"""
+		#if self.trader.state != 'ORDER':
+		#	return False
 
-			Template(now)
-			-------------
-			try:
-				is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
+		is_rises = []
+		error_flag = False
+		#error_count = 0
 
-			try:
-				is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
+		"""
 
-			if error_count > 0:
-				print(f'Error count : {error_count}')
-				raise RuntimeError('entry : error count is not 0')
+		Template(now)
+		-------------
+		try:
+			is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+		except ValueError as e:
+			print(f'{e}')
+			error_count += 1
 
-				|
-				v
+		try:
+			is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+		except ValueError as e:
+			print(f'{e}')
+			error_count += 1
 
-			 Template(in future)
-			 -------------------
+		if error_count > 0:
+			print(f'Error count : {error_count}')
+			raise RuntimeError('entry : error count is not 0')
 
-			 try:
-			 	is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
-			 	is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
-			 except ValueError as e:
-			 	print(f'{e}')
-			 	error_flag = True
+			|
+			v
 
-			if error_flag is True:
-				raise RuntimeError('entry : message')
+		 Template(in future)
+		 -------------------
 
-			"""
+		 try:
+			is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+			is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+		 except ValueError as e:
+			print(f'{e}')
+			error_flag = True
 
-			try:
-				is_rises.append(is_rise_with_xxx(self.param.target, candlesticks))
-				is_rises.append(is_rise_with_yyy(self.param.target, candlesticks))
-			except ValueError as e:
-				print(f'{e}')
-				error_flag = True
+		if error_flag is True:
+			raise RuntimeError('entry : message')
 
-			if error_flag is True:
-				raise RuntimeError('entry : One or more entry algorythm(is_rise_with_xxx) throw exception')
+		"""
+
+		try:
+			is_rises.append(is_rise_with_xxx(self.param.target, candlesticks))
+			is_rises.append(is_rise_with_yyy(self.param.target, candlesticks))
+		except ValueError as e:
+			print(f'{e}')
+			error_flag = True
+
+		if error_flag is True:
+			raise RuntimeError('entry : One or more entry algorythm(is_rise_with_xxx) throw exception')
 
 #			if error_count > 0:
 #				print(f'Error count : {error_count}')
 #				raise RuntimeError('entry : error count is not 0')
 
-			if (all(is_rises) is True or any(is_rises) is False) is False:
-				raise ValueError('entry : is_rises is not [All True] or [All False]')
+		if (all(is_rises) is True or any(is_rises) is False) is False:
+			raise ValueError('entry : is_rises is not [All True] or [All False]')
 
-			is_rise = all(is_rises)
+		is_rise = all(is_rises)
 
-			#売買両方取り扱う場合（現時点ではオフ）
-			#kind = 'BUY' if True is is_rise else 'SELL'
+		#売買両方取り扱う場合（現時点ではオフ）
+		#kind = 'BUY' if True is is_rise else 'SELL'
 
-			#買いの場合のみ取り扱う
-			kind = 'BUY' if True is is_rise else None
+		#買いの場合のみ取り扱う
+		kind = 'BUY' if True is is_rise else None
+		is_order_created = self.trader.test_create_order(is_rise)
 
-			is_order_created = self.trader.test_create_order(is_rise)
-			self.evaluator.set_order(kind, True)
+		if True is is_order_created:
+			#self.evaluator.set_order(kind, True)
+			#ORDER状態からORDERWAITINGに状態遷移
+			self.trader.switch_state()
 
-			if True is is_order_created:
-				#ORDER状態からORDERWAITINGに状態遷移
-				self.trader.switch_state()
+		return is_order_created, kind
 
 	def settle(self, candlesticks):
 		threshold = 8
