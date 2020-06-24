@@ -1,5 +1,8 @@
 ## 改修中（Under the construction）
 
+Schema is here: http://go.bubbl.us/a76bd4/28ec?/FX-trading-bot
+
+
 # 使い方
 ```
 $python3 bot.py auth.json
