@@ -1,54 +1,59 @@
 import numpy as np
 import pandas as pd
-
-#for Exception
 import requests
-
-#for Sleep
 import time
 
-#User difined classes
+#User defined classes
 from OandaEndpoints import Pricing
 from OandaCandleStick import CandleStick
-#from predict_RNN import RNNPredictor
-#from RNNparam import RNNparam
-#from Fetter import Fetter
-#from Plotter import Plotter
-#from Predictor import Predictor
 from Trader import Trader
 from Evaluator import Evaluator
 from PlotHelper import PlotHelper
-
-#User difined functions
 from Notify import notify_from_line
 from OandaEndpoints import from_byte_to_dict, from_response_to_dict
-from Analysis import is_rise_with_zebratail, is_rise_with_trendline
-
-#def can_update(recv, candlestick, mode=None):
-#	"""
-#	ローソク足が更新可能かを返す, 対象とする時間足を指定する必要はない
-#	for文などで予め対象とするローソク足を抽出する必要あり
-#
-#	Parameters
-#	----------
-#	recv: dict
-#		tickデータを含む受信データ
-#	candlestick: CandleStick
-#		ある時間足のローソク足データ
-#	"""
-#	dummy_tick = pd.Series(float(recv["bids"][0]["price"]),index=[pd.to_datetime(recv["time"])])
-#	dummy_tickdata = candlestick.tickdata.append(dummy_tick)
-#	dummy_ohlc = dummy_tickdata.resample(candlestick.rate).ohlc()
-#
-#	num_candle = candlestick.count if mode is 'init' else 0
-#	
-#	if((num_candle + 2) <= len(dummy_ohlc)):
-#		return True
-#	else:
-#		return False
+from Analysis import is_rise_with_trendline
 
 class Manager:
-	def __init__(self, param, instrument, environment='demo', mode='test'):
+
+	"""
+
+	売買のタイミングを管理するクラス
+	"""
+	
+	def __init__(self, param: list, instrument: str, environment: str='demo', mode: str='test'):
+		"""
+
+		トレードの対象となる通貨ペアと時間足（種類と本数）を定義
+
+		Parameter
+		---------
+		param : list
+			取り扱う時間足のリスト
+		instrument : str
+			取り扱う通貨ペア
+		environment : str
+			トレード環境（本番or仮想)を指定
+		mode : str
+			デバッグ用の出力を行うかどうかを指定
+
+		Self
+		----
+		param : list
+			取り扱う時間足のリスト
+		instrument : str
+			取り扱う通貨ペア
+		environment : str
+			トレード環境（本番or仮想)を指定
+		trader : Trader (User defined)
+		evaluator : Evaluator (User defined)
+		checking_freq : int (const)
+			画面出力の頻度を決定するための定数
+		count : int
+			画面出力のための内部カウンタ
+		
+
+		"""
+
 		self.instrument = instrument
 		self.environment = environment
 		self.param = param
@@ -57,7 +62,7 @@ class Manager:
 		#self.fetters = {k: Fetter(k) for k in param.timelist}
 		self.evaluator = Evaluator(self.param.timelist, instrument, environment)
 
-		self.checking_freq = 0
+		self.checking_freq = 10
 		self.count = 0
 
 	def __del__(self):
@@ -84,7 +89,9 @@ class Manager:
 			return False
 
 	def driver(self, candlesticks):
+
 		"""
+
 		ローソク足データの収集、解析、取引を取り扱う
 
 		Parameters
@@ -95,13 +102,12 @@ class Manager:
 			取引を行う環境。バーチャル口座(demo)orリアル口座(live)
 		instrument: str
 			取引を行う通貨	
+
 		"""
-		print('test_driver begin')
-		print('trader was created')
 
 		#現在保有しているポジションをすべて決済
 		self.trader.clean()
-		print('close all position to use trader.clean()')
+		print('<Manager> Close all positions')
 
 		while True:
 			#指定した通貨のtickをストリーミングで取得する
@@ -124,11 +130,26 @@ class Manager:
 				continue
 
 	def run(self, resp, candlesticks):
+
 		"""
-		raise ValueError
-		raise urllib3.exceptions.ProtocolError
-		raise requests.exceptions.Chunked EncodingError
+
+		戦略を元に売買を実行する
+
+		Parameter
+		---------
+		resp : requests.response
+			ストリーミングでの接続を行うためのレスポンスデータ
+		candlesticks : dict
+			取り扱うローソク足の種類と本数を格納した辞書型
+
+		Exception
+		---------
+		ValueError
+		urllib3.exceptions.ProtocolError
+		requests.exceptions.Chunked EncodingError
+
 		"""
+
 		for line in resp.iter_lines(1):
 			if self.has_price(line):
 				recv = from_byte_to_dict(line)
@@ -148,18 +169,33 @@ class Manager:
 					self.trader.switch_state()
 			self.count = 0 if self.checking_freq == self.count else (self.count + 1)
 
-	def execute_strategy(self, recv, candlesticks):
+	def execute_strategy(self, recv: dict, candlesticks: dict):
+		
+		"""
+		売買の戦略を決定し、売買タイミングを決定する
+
+		Parameter
+		---------
+		recv : dict
+			為替のtickデータが格納された辞書型のデータ
+		candlesticks : dict
+			1つ、またはそれ以上のローソク足の組
+
+		"""
+
 		for k, v in candlesticks.items():
-			#if can_update(recv, v) is True:
 			if v.can_update(recv) is True:
 				v.update_ohlc_()
-				print(k)
-				print(len(v.ohlc))
+				print(f'{k} is updated -> total length : {len(v.ohlc)}')
 
 				if k == self.param.entry_freq:
+
 					try:
 						#エントリー
-						self.entry(candlesticks)
+						(is_order_created, kind) = self.entry(candlesticks)
+						if is_order_created is True:
+							self.evaluator.set_order(kind, True)
+
 					except (RuntimeError, ValueError) as e:
 						print(f'{e}')
 
@@ -178,61 +214,114 @@ class Manager:
 					self.trader.switch_state()
 			v.append_tickdata(recv)
 
-	def entry(self, candlesticks):
-		if self.trader.state == 'ORDER':
-			is_rises = []
-			error_count = 0
+	def entry(self, candlesticks: dict) -> 'bool, str':
 
-			"""
-			try:
-				length = 10
-				is_rises.append(is_rise_with_trendline(self.param.target, candlesticks, length))
-			except TypeError as e:
-				print(f'{e}')
-				error_count += 1
+		"""
 
-			try:
-				is_rises.append(is_rise_with_zebratail(self.param.target, candlesticks))
-			except TypeError as e:
-				print(f'{e}')
-				error_count += 1
-			"""
-			try:
-				is_rises.append(is_rise_with_insidebar(self.param.target, candlesticks, length))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
+		エントリー状態に遷移させる
+		is_rise_with_xxx（任意のアルゴリズム）によって戦略を決定
+		現状、「買い」（今後上昇するかのみ）のための設計
+		
+		Parameter
+		---------
+		candlesticks : dict
+			1つ、またはそれ以上のローソク足の組
 
-			try:
-				is_rises.append(is_rise_with_line_touch(self.param.target, candlesticks))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
+		Exception
+		---------
+		各is_rise_with_xxxが投げる例外を参照、基本的にValueErrorを推奨
 
-			try:
-				is_rises.append(is_rise_with_trendline_maxarea(self.param.target, candlesticks))
-			except ValueError as e:
-				print(f'{e}')
-				error_count += 1
+		Return
+		------
+		is_order_created : bool
+			注文が生成されたかどうか
+		kind : str
+			注文内容'BUY' or 'SELL'
 
-			if error_count > 0:
-				print(f'Error count : {error_count}')
-				raise RuntimeError('entry : error count is not 0')
+		"""
 
-			if (all(is_rises) is True or any(is_rises) is False) is False:
-				print('Unstable: ENTRY')
-				raise ValueError('entry : is_rises is not [All True] or [All False]')
+		# ORDER状態じゃない場合の例外 here
+		if self.trader.state != 'ORDER':
+			raise ValueError('#entry -> Exception : trader.state is not "ORDER"')
+		# インターフェイスもORDER or not -> order is created & kindへ変更
 
-			is_rise = all(is_rises)
-			kind = 'BUY' if True is is_rise else 'SELL'
+		#if self.trader.state != 'ORDER':
+		#	return False
 
-			is_order_created = self.trader.test_create_order(is_rise)
-			self.evaluator.set_order(kind, True)
-			print(kind)
+		is_rises = []
+		error_flag = False
+		#error_count = 0
 
-			if True is is_order_created:
-				#ORDER状態からORDERWAITINGに状態遷移
-				self.trader.switch_state()
+		"""
+
+		Template(now)
+		-------------
+		try:
+			is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+		except ValueError as e:
+			print(f'{e}')
+			error_count += 1
+
+		try:
+			is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+		except ValueError as e:
+			print(f'{e}')
+			error_count += 1
+
+		if error_count > 0:
+			print(f'Error count : {error_count}')
+			raise RuntimeError('entry : error count is not 0')
+
+			|
+			v
+
+		 Template(in future)
+		 -------------------
+
+		 try:
+			is_rises.append(is_rise_with_xxx(arg1, arg2, ...))
+			is_rises.append(is_rise_with_yyy(arg1, arg2, ...))
+		 except ValueError as e:
+			print(f'{e}')
+			error_flag = True
+
+		if error_flag is True:
+			raise RuntimeError('entry : message')
+
+		"""
+
+		try:
+			is_rises.append(is_rise_with_xxx(self.param.target, candlesticks))
+			is_rises.append(is_rise_with_yyy(self.param.target, candlesticks))
+		except ValueError as e:
+			print(f'{e}')
+			error_flag = True
+
+		if error_flag is True:
+			raise RuntimeError('entry : One or more entry algorythm(is_rise_with_xxx) throw exception')
+
+#			if error_count > 0:
+#				print(f'Error count : {error_count}')
+#				raise RuntimeError('entry : error count is not 0')
+
+		if (all(is_rises) is True or any(is_rises) is False) is False:
+			raise ValueError('entry : is_rises is not [All True] or [All False]')
+
+		is_rise = all(is_rises)
+
+		#売買両方取り扱う場合（現時点ではオフ）
+		#kind = 'BUY' if True is is_rise else 'SELL'
+
+		#買いの場合のみ取り扱う
+		kind = 'BUY' if True is is_rise else None
+		is_order_created = self.trader.test_create_order(is_rise)
+
+		if True is is_order_created:
+			#self.evaluator.set_order(kind, True)
+			#ORDER状態からORDERWAITINGに状態遷移
+			self.trader.switch_state()
+
+		return is_order_created, kind
 
 	def settle(self, candlesticks):
 		threshold = 8
